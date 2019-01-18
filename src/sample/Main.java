@@ -35,7 +35,7 @@ public class Main {
 
         double[][] points = {{4.0,2.0},{2.0,5.0},{3.0,8.0}};
         int[] classes = {-1, -1, 1};
-        double[] alphas = {0.679,13.654,8.419};
+        double[] alphas = {-0.679,13.654,8.419};
 
         //double[][] points = {{2.0,1.0},{2.0,-1.0},{4.0,0.0}};
         //int[] classes = {-1, -1, 1};
