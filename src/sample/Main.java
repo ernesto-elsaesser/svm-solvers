@@ -1,9 +1,6 @@
 package sample;
 
 import java.awt.*;
-import java.awt.geom.AffineTransform;
-import java.awt.geom.Rectangle2D;
-import java.awt.image.ColorModel;
 import java.io.FileReader;
 import java.util.List;
 import javax.swing.*;
@@ -21,7 +18,7 @@ public class Main {
         JFrame f = new JFrame();
 
         JLabel label = new JLabel("Loading ...");
-        label.setBounds(160,150, 80,40);
+        label.setBounds(260,250, 80,40);
         f.add(label);
 
         f.setSize(600,600);
