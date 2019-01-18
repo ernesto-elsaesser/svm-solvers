@@ -1,23 +1,28 @@
 package sample;
 
-import javafx.application.Application;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
-import javafx.stage.Stage;
+import java.io.FileReader;
+import javax.swing.*;
+import com.opencsv.CSVReader;
 
-public class Main extends Application {
-
-    @Override
-    public void start(Stage primaryStage) throws Exception{
-        Parent root = FXMLLoader.load(getClass().getResource("sample.fxml"));
-        primaryStage.setTitle("Hello World");
-        primaryStage.setScene(new Scene(root, 300, 275));
-        primaryStage.show();
-    }
-
+public class Main {
 
     public static void main(String[] args) {
-        launch(args);
+
+        JFrame f = new JFrame();
+
+        f.setSize(400,400);
+        f.setLayout(null);
+        f.setVisible(true);
+
+        try {
+            loadData();
+        } catch (Exception e) {
+            System.out.println("Error loading CSV: " + e.getLocalizedMessage());
+        }
+    }
+
+    private static void loadData() throws Exception {
+        CSVReader reader = new CSVReader(new FileReader("data/svmguide1.csv"));
+        //TODO: read CSV
     }
 }
