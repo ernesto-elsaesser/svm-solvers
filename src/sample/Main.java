@@ -16,15 +16,16 @@ public class Main {
         f.setVisible(true);
 
         try {
-            double[][] values = loadData();
+            double[][] training = parse("data/svmguide1.csv");
+            double[][] testing = parse("data/svmguide1-t.csv");
             // TODO: apply SVM
         } catch (Exception e) {
             System.out.println("Error loading CSV: " + e.getLocalizedMessage());
         }
     }
 
-    private static double[][] loadData() throws Exception {
-        CSVReader reader = new CSVReader(new FileReader("data/svmguide1.csv"), ' ');
+    private static double[][] parse(String filename) throws Exception {
+        CSVReader reader = new CSVReader(new FileReader(filename), ' ');
         List<String[]> lines = reader.readAll();
         int num = lines.size();
         double[][] values = new double[num][4];
