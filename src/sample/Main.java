@@ -33,9 +33,10 @@ public class Main {
             System.out.println("Error loading CSV: " + e.getLocalizedMessage());
         }
 
-        double[][] points1 = {{5.0,12.0},{15.0,20.0}};
-        double[][] points2 = {{20.0,8.0},{25.0,20.0}};
-        JFreeChart chart = createChart(1.0, 0.0, 50.0, points1, points2);
+        double[][] points = {{4.0,2.0},{2.0,5.0},{3.0,8.0}};
+        int[] classes = {-1, -1, 1};
+        double[] alphas = {-8.42,-13.65,0.68};
+        JFreeChart chart = createChart(points, classes, alphas);
 
         ChartPanel panel = new ChartPanel(chart);
         panel.setPreferredSize(f.getSize());
@@ -63,18 +64,18 @@ public class Main {
         return Double.valueOf(parts[1]);
     }
 
-    private static JFreeChart createChart(double a, double b, double maxX, double[][] points1, double[][] points2) {
-        XYSeries lineSeries = lineSeries(a, b, maxX);
-        XYSeries pointsSeries1 = pointSeries("PointSeries1", points1);
-        XYSeries pointsSeries2 = pointSeries("PointSeries2", points2);
+    private static JFreeChart createChart(double[][] points, int[] classes, double[] alphas) {
+        XYSeries hyperplane = lineSeries(points, classes, alphas, "Hyperplane");
+        XYSeries class1points = pointSeries(points, classes, 1, "Class1Points");
+        XYSeries class2points = pointSeries(points, classes, -1,"Class2Points");
 
         XYSeriesCollection dataset = new XYSeriesCollection();
-        dataset.addSeries(lineSeries);
-        dataset.addSeries(pointsSeries1);
-        dataset.addSeries(pointsSeries2);
+        dataset.addSeries(hyperplane);
+        dataset.addSeries(class1points);
+        dataset.addSeries(class2points);
 
-        JFreeChart chart = ChartFactory.createXYLineChart("TheChart", "X",
-                "Y", dataset, PlotOrientation.VERTICAL, false, false, false);
+        JFreeChart chart = ChartFactory.createXYLineChart("SVMChart", "",
+                "", dataset, PlotOrientation.VERTICAL, false, false, false);
 
         XYPlot plot = (XYPlot) chart.getPlot();
         XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
@@ -93,22 +94,55 @@ public class Main {
         return chart;
     }
 
-    private static XYSeries lineSeries(double a, double b, double maxX) {
-        int res = 100;
-        XYSeries series = new XYSeries("LineSeries");
-        double step = maxX / ((double) 100);
+    private static XYSeries lineSeries(double[][] points, int[] classes, double[] alphas, String key) {
+        double[] max = maxValues(points);
+        double b1 = 0.0;
+        double b2 = 0.0;
+        for (int i = 0; i < points.length; i++) {
+            double t = alphas[i] * (double)classes[i];
+            b1 += t * points[i][0];
+            b2 += t * points[i][1];
+        }
+        double[] anyP = points[0];
+        double b0 = -(anyP[0] * b1 + anyP[1] * b2);
+
+        int res = 25;
+        XYSeries series = new XYSeries(key);
+        double xStep = max[0] / ((double) res);
         for(int i = 0; i < res; i++) {
-            double x = i * step;
-            double y = a * x + b;
-            series.add(x, y);
+            double x = i * xStep;
+            double y = lineFunc(b0, b1, b2, x);
+            if (y < max[1]) {
+                series.add(x, y);
+            }
         }
         return series;
     }
 
-    private static XYSeries pointSeries(String key, double[][] points) {
+    private static double lineFunc(double b0, double b1, double b2, double x) {
+        return -(x * b1 + b0) / b2;
+    }
+
+    private static double[] maxValues(double[][] points) {
+        double[] max = {0.0, 0.0};
+        for (int i = 0; i < points.length; i++) {
+            double[] p = points[i];
+            if (p[0] > max[0]) {
+                max[0] = p[0];
+            }
+            if (p[1] > max[1]) {
+                max[1] = p[1];
+            }
+        }
+        return max;
+    }
+
+    private static XYSeries pointSeries(double[][] points, int[] classes, int c, String key) {
         XYSeries series = new XYSeries(key);
         for(int i = 0; i < points.length; i++) {
-            series.add(points[i][0], points[i][1]);
+            if (classes[i] == c) {
+                series.add(points[i][0], points[i][1]);
+            }
         }
         return series;
     }
