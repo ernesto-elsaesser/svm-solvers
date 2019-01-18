@@ -2,6 +2,7 @@ package sample;
 
 import java.awt.*;
 import java.io.FileReader;
+import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
 import com.opencsv.CSVReader;
@@ -35,17 +36,39 @@ public class Main {
 
         double[][] points = {{4.0,2.0},{2.0,5.0},{3.0,8.0}};
         int[] classes = {-1, -1, 1};
-        double[] alphas = {-0.679,13.654,8.419};
+        double[] wrongAlphas = {-0.679,13.654,8.419};
+        double[] optimizedAlphas = calcAlphas(points, classes);
 
         //double[][] points = {{2.0,1.0},{2.0,-1.0},{4.0,0.0}};
         //int[] classes = {-1, -1, 1};
         //double[] alphas = {3.25,3.25,3.5};
-        JFreeChart chart = createChart(points, classes, alphas);
 
+        JFreeChart chart = createChart(points, classes, optimizedAlphas);
         ChartPanel panel = new ChartPanel(chart);
         panel.setPreferredSize(f.getSize());
         f.setContentPane(panel);
         SwingUtilities.updateComponentTreeUI(f);
+    }
+
+    private static double[] calcAlphas(double[][] points, int[] classes) {
+        SVM svm = new SVM();
+        List<SupportVector> vectors = new ArrayList<>();
+        for (int i = 0; i < points.length; i++) {
+            DataVector d = new RealVector(points[i]);
+            SupportVector v = new SupportVector(d, classes[i]);
+            vectors.add(v);
+        }
+        svm.vectors = vectors;
+
+        SMO smo = new SMO(svm);
+        smo.train();
+
+        double[] alphas = new double[points.length];
+        for(int i = 0; i < points.length; i++) {
+            SupportVector v = svm.vectors.get(i);
+            alphas[i] = v.alpha;
+        }
+        return alphas;
     }
 
     private static double[][] parse(String filename) throws Exception {
@@ -115,7 +138,7 @@ public class Main {
             for(int i = 0; i < res; i++) {
                 double x = i * xStep;
                 double y = lineFunc(b, x);
-                if (y >= range[0] && y <= range[1]) {
+                if (y >= range[0] || y <= range[1]) {
                     series.add(x, y);
                 }
             }
