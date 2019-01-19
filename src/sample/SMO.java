@@ -1,39 +1,7 @@
-/*
- * Copyright (C) 2010-2011 David A Roberts <d@vidr.cc>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-
 package sample;
 
 import java.util.*;
-import java.util.Map.Entry;
 
-/**
- * An implementation of the Sequential Minimal Optimization (SMO) algorithm
- * described by J C Platt (1998) in
- * <a href="http://research.microsoft.com/pubs/68391/smo-book.pdf">
- * Fast Training of Support Vector Machines
- * using Sequential Minimal Optimization</a>.
- *
- * @author  David A Roberts
- */
 class SMO {
     private static final Random random = new Random();
     private SVM svm;
@@ -103,37 +71,20 @@ class SMO {
                         this.leq(v.alpha, 0, SVM.EPSILON));
     }
 
-    /**
-     * The second choice heuristic. Chooses a vector that is likely to
-     * maximise the size of the step taken during optimisation. This is
-     * approximated by attempting to choose a vector such that the
-     * absolute difference in error values between the two vectors is
-     * maximised.
-     *
-     * @param error  the error value of the first vector
-     * @return       the second vector
-     */
     private SupportVector secondChoice(double error) {
-        Entry<SupportVector,Double> best = null;
+        Map.Entry<SupportVector,Double> best = null;
         if(error > 0) { // return vector with minimum error
-            for(Entry<SupportVector,Double> entry : errorCache.entrySet())
+            for(Map.Entry<SupportVector,Double> entry : errorCache.entrySet())
                 if(best == null || entry.getValue() < best.getValue())
                     best = entry;
         } else { // return vector with maximum error
-            for(Entry<SupportVector,Double> entry : errorCache.entrySet())
+            for(Map.Entry<SupportVector,Double> entry : errorCache.entrySet())
                 if(best == null || entry.getValue() > best.getValue())
                     best = entry;
         }
         return best.getKey();
     }
 
-    /**
-     * Optimise the given examples.
-     *
-     * @param v1  an example to optimise
-     * @param v2  the other example to optimise
-     * @return    true iff positive progress (a non-zero step size) was made
-     */
     private boolean takeStep(SupportVector v1, SupportVector v2) {
         if(v1.x == v2.x)
             // identical inputs cause objective function to become
@@ -229,80 +180,5 @@ class SMO {
 
     double clamp(double x, double low, double high) {
         return Math.min(Math.max(x, low), high);
-    }
-}
-
-class SVM {
-    public static final double EPSILON = 1e-3;
-    /**
-     * The support vectors
-     */
-    List<SupportVector> vectors = new ArrayList<>();
-    /**
-     * The threshold
-     */
-    double b = 0;
-    /**
-     * The kernel function
-     */
-    Kernel kernel;
-    /**
-     * The soft-margin parameter
-     */
-    double c;
-
-    public SVM() {
-        this.kernel = new LinearKernel();
-        this.c = 1.0;
-    }
-
-    public void add(double[] vector, int y) {
-        vectors.add(new SupportVector(vector, y));
-    }
-
-    public double output(double[] x) {
-        // $u = \sum_j \alpha_j y_j K(x_j, x) - b$
-        double u = -b;
-        for(SupportVector v : vectors) {
-            if(v.alpha <= EPSILON)
-                // ignore non-support vectors that have not yet been pruned
-                // this is only necessary to improve performance during
-                // training, and doesn't do anything once prune() has been
-                // called
-                continue;
-            u += v.alpha * v.y * kernel.getValue(v.x, x);
-        }
-        return u;
-    }
-}
-
-class SupportVector {
-    /** The input vector */
-    final double[] x;
-    /** The target class: either +1 or -1 */
-    final byte y;
-    /** The Lagrange multiplier for this example */
-    double alpha = 0;
-    /** Is the Lagrange multiplier bound? (Only used by SMO) */
-    transient boolean bound = true;
-
-    public SupportVector(double[] vector, int y) {
-        if(Math.abs(y) != 1)
-            throw new IllegalArgumentException("y must be either +1 or -1");
-        this.x = vector;
-        this.y = (byte) y;
-    }
-}
-
-interface Kernel {
-    double getValue(double[] x1, double[] x2);
-}
-
-class LinearKernel implements Kernel {
-    public double getValue(double[] x1, double[] x2) {
-        double prod = 0;
-        for(int i = 0; i < x2.length; i++)
-            prod += x1[i] * x2[i];
-        return prod;
     }
 }
