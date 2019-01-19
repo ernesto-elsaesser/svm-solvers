@@ -45,9 +45,9 @@ public class Main {
 
         Hyperplane h = new Hyperplane();
         if (USE_CACHED_PLANE) {
-            h.b0 = 4.5;
-            h.b0 = 0.6;
-            h.b0 = 0.4;
+            h.b0 = -2.425374;
+            h.b1 = 0.0455677;
+            h.b2 = 0.0379284;
         } else {
             solve(training);
             h = deriveHyperplane(training);
@@ -103,7 +103,7 @@ public class Main {
             String[] line = lines.get(i);
             double x1 = parseValue(line[1]);
             double x2 = parseValue(line[2]);
-            byte y = (byte) Integer.parseInt(line[0]);
+            int y = Integer.parseInt(line[0]);
             SupportVector v = new SupportVector(x1, x2, y);
             vectors.add(v);
         }

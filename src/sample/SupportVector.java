@@ -11,10 +11,14 @@ public class SupportVector {
     /** Is the Lagrange multiplier bound? */
     transient boolean bound = true;
 
-    public SupportVector(double x1, double x2, byte y) {
+    public SupportVector(double x1, double x2, int y) {
         double[] x = {x1, x2};
         this.x = x;
-        this.y = y;
+        if (y >= 1) {
+            this.y = (byte)1;
+        } else {
+            this.y = (byte)0;
+        }
     }
 
     public double sign() {
