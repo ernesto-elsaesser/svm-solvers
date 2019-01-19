@@ -97,10 +97,10 @@ class SMO {
     private boolean satisfiesKKTConditions(SupportVector v) {
         final double r = error(v) * v.y; // (u-y)*y = y*u-1
         // (r >= 0 or alpha >= C) and (r <= 0 or alpha <= 0)
-        return (MathUtil.geq(r, 0, SVM.EPSILON) ||
-                MathUtil.geq(v.alpha, svm.c, SVM.EPSILON)) &&
-                (MathUtil.leq(r, 0, SVM.EPSILON) ||
-                        MathUtil.leq(v.alpha, 0, SVM.EPSILON));
+        return (this.geq(r, 0, SVM.EPSILON) ||
+                this.geq(v.alpha, svm.c, SVM.EPSILON)) &&
+                (this.leq(r, 0, SVM.EPSILON) ||
+                        this.leq(v.alpha, 0, SVM.EPSILON));
     }
 
     /**
@@ -174,9 +174,9 @@ class SMO {
         // normal circumstances - the objective function is positive
         // definite and there is a minimum along the diagonal line
         v2.alpha = alpha2 + y2 * (e1-e2) / eta; // equation (12.6)
-        v2.alpha = MathUtil.clamp(v2.alpha, l, h); // equation (12.7)
+        v2.alpha = this.clamp(v2.alpha, l, h); // equation (12.7)
 
-        if(MathUtil.equals(v2.alpha, alpha2,
+        if(this.equals(v2.alpha, alpha2,
                 SVM.EPSILON*(v2.alpha+alpha2+SVM.EPSILON))) {
             // change in alpha2 was too small
             v2.alpha = alpha2;
@@ -184,10 +184,10 @@ class SMO {
         }
 
         v1.alpha = alpha1 + s*(alpha2-v2.alpha); // equation (12.8)
-        v1.bound = MathUtil.leq(v1.alpha, 0, SVM.EPSILON) ||
-                MathUtil.geq(v1.alpha, svm.c, SVM.EPSILON);
-        v2.bound = MathUtil.leq(v2.alpha, 0, SVM.EPSILON) ||
-                MathUtil.geq(v2.alpha, svm.c, SVM.EPSILON);
+        v1.bound = this.leq(v1.alpha, 0, SVM.EPSILON) ||
+                this.geq(v1.alpha, svm.c, SVM.EPSILON);
+        v2.bound = this.leq(v2.alpha, 0, SVM.EPSILON) ||
+                this.geq(v2.alpha, svm.c, SVM.EPSILON);
 
         // update threshold
         final double b = svm.b;
@@ -214,15 +214,30 @@ class SMO {
 
         return true;
     }
-}
 
+    boolean equals(double x, double y, double epsilon) {
+        return Math.abs(x - y) < epsilon;
+    }
+
+    boolean leq(double x, double y, double epsilon) {
+        return x <= y + epsilon;
+    }
+
+    boolean geq(double x, double y, double epsilon) {
+        return x >= y - epsilon;
+    }
+
+    double clamp(double x, double low, double high) {
+        return Math.min(Math.max(x, low), high);
+    }
+}
 
 class SVM {
     public static final double EPSILON = 1e-3;
     /**
      * The support vectors
      */
-    List<SupportVector> vectors = new ArrayList<SupportVector>();
+    List<SupportVector> vectors = new ArrayList<>();
     /**
      * The threshold
      */
@@ -241,11 +256,11 @@ class SVM {
         this.c = 1.0;
     }
 
-    public void add(MyVector x, int y) {
-        vectors.add(new SupportVector(x, y));
+    public void add(double[] vector, int y) {
+        vectors.add(new SupportVector(vector, y));
     }
 
-    public double output(MyVector x) {
+    public double output(double[] x) {
         // $u = \sum_j \alpha_j y_j K(x_j, x) - b$
         double u = -b;
         for(SupportVector v : vectors) {
@@ -263,7 +278,7 @@ class SVM {
 
 class SupportVector {
     /** The input vector */
-    final MyVector x;
+    final double[] x;
     /** The target class: either +1 or -1 */
     final byte y;
     /** The Lagrange multiplier for this example */
@@ -271,66 +286,23 @@ class SupportVector {
     /** Is the Lagrange multiplier bound? (Only used by SMO) */
     transient boolean bound = true;
 
-    public SupportVector(MyVector x, int y) {
+    public SupportVector(double[] vector, int y) {
         if(Math.abs(y) != 1)
             throw new IllegalArgumentException("y must be either +1 or -1");
-        this.x = x;
+        this.x = vector;
         this.y = (byte) y;
     }
 }
 
 interface Kernel {
-    double getValue(MyVector x1, MyVector x2);
+    double getValue(double[] x1, double[] x2);
 }
 
 class LinearKernel implements Kernel {
-    public double getValue(MyVector x1, MyVector x2) {
-        return x1.dotProduct(x2);
-    }
-}
-
-class MathUtil {
-    public static boolean equals(double x, double y, double epsilon) {
-        return Math.abs(x - y) < epsilon;
-    }
-
-    public static boolean leq(double x, double y, double epsilon) {
-        return x <= y + epsilon;
-    }
-
-    public static boolean geq(double x, double y, double epsilon) {
-        return x >= y - epsilon;
-    }
-
-    public static double clamp(double x, double low, double high) {
-        return Math.min(Math.max(x, low), high);
-    }
-}
-
-class MyVector {
-    private final double[] vector;
-
-    public MyVector(double... vector) {
-        this.vector = vector;
-    }
-
-    public double dotProduct(MyVector x) {
+    public double getValue(double[] x1, double[] x2) {
         double prod = 0;
-        for(int i = 0; i < vector.length; i++)
-            prod += vector[i] * x.vector[i];
+        for(int i = 0; i < x2.length; i++)
+            prod += x1[i] * x2[i];
         return prod;
-    }
-
-    public double sqDist(MyVector x) {
-        double r2 = 0;
-        for(int i = 0; i < vector.length; i++) {
-            double d = vector[i] - x.vector[i];
-            r2 += d*d;
-        }
-        return r2;
-    }
-
-    public String toString() {
-        return Arrays.toString(vector);
     }
 }
