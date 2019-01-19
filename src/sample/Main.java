@@ -2,7 +2,6 @@ package sample;
 
 import java.awt.*;
 import java.io.FileReader;
-import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
 import com.opencsv.CSVReader;
