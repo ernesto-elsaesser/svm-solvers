@@ -32,12 +32,12 @@ public class Main {
         f.setLayout(null);
         f.setVisible(true);
 
-        List<SupportVector> training = parse("data/fourclass.csv");
-        List<SupportVector> testing = parse("data/fourclass-t.csv");
+        List<SupportVector> training = parse("data/svmguide1.csv");
+        List<SupportVector> testing = parse("data/svmguide1-t.csv");
 
         Hyperplane h = new Hyperplane();
         if (USE_CACHED_PLANE) {
-            h.b0 = -4.5;
+            h.b0 = -4.2;
             h.b1 = 0.6;
             h.b2 = 0.4;
         } else {
