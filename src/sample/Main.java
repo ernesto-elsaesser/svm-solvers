@@ -52,13 +52,9 @@ public class Main {
 
     private static double[] calcAlphas(double[][] points, int[] classes) {
         SVM svm = new SVM();
-        List<SupportVector> vectors = new ArrayList<>();
         for (int i = 0; i < points.length; i++) {
-            MyVector d = new MyVector(points[i]);
-            SupportVector v = new SupportVector(d, classes[i]);
-            vectors.add(v);
+            svm.add(points[i], classes[i]);
         }
-        svm.vectors = vectors;
 
         SMO smo = new SMO(svm);
         smo.train();
