@@ -54,7 +54,7 @@ public class Main {
         SVM svm = new SVM();
         List<SupportVector> vectors = new ArrayList<>();
         for (int i = 0; i < points.length; i++) {
-            DataVector d = new RealVector(points[i]);
+            MyVector d = new MyVector(points[i]);
             SupportVector v = new SupportVector(d, classes[i]);
             vectors.add(v);
         }
@@ -66,7 +66,11 @@ public class Main {
         double[] alphas = new double[points.length];
         for(int i = 0; i < points.length; i++) {
             SupportVector v = svm.vectors.get(i);
-            alphas[i] = v.alpha;
+            if (v.alpha <= SVM.EPSILON) {
+                alphas[i] = 0;
+            } else {
+                alphas[i] = v.alpha;
+            }
         }
         return alphas;
     }
