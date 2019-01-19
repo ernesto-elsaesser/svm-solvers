@@ -36,8 +36,8 @@ public class Main {
         List<SupportVector> testing = null;
 
         try {
-            training = parse("data/svmguide1.csv");
-            testing = parse("data/svmguide1-t.csv");
+            training = parse("data/fourclass.csv");
+            testing = parse("data/fourclass-t.csv");
         } catch (Exception e) {
             System.out.println("Error loading CSV: " + e.getLocalizedMessage());
             return;
