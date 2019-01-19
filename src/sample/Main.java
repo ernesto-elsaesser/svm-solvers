@@ -50,11 +50,27 @@ public class Main {
 
         solve(training);
 
-        JFreeChart chart = createChart(training);
+        double[] b = deriveLine(training);
+        JFreeChart chart = createChart(training, b);
         ChartPanel panel = new ChartPanel(chart);
         panel.setPreferredSize(f.getSize());
         f.setContentPane(panel);
         SwingUtilities.updateComponentTreeUI(f);
+
+        classifyNewData(testing, b);
+    }
+
+    private static void classifyNewData(List<SupportVector> testing, double[] b) {
+        int rightClassification = 0;
+
+        for (SupportVector testVector:
+             testing) {
+            double res = testVector.x[0] * b[1] + testVector.x[1] * b[2] + b[0];
+            if (res <= 0 && ((int)testVector.y) == 0)
+                rightClassification++;
+        }
+
+        System.out.println("Zuverlässigkeit " + (((double)rightClassification / testing.size()) * 100) + "%");
     }
 
     private static void solve(List<SupportVector> vectors) {
@@ -86,8 +102,8 @@ public class Main {
         return Double.valueOf(parts[1]);
     }
 
-    private static JFreeChart createChart(List<SupportVector> vectors) {
-        XYSeries hyperplane = lineSeries(vectors, "Hyperplane");
+    private static JFreeChart createChart(List<SupportVector> vectors, double[] b) {
+        XYSeries hyperplane = lineSeries(vectors, "Hyperplane", b);
         XYSeries class1points = pointSeries(vectors, (byte)0, "Class1Points");
         XYSeries class2points = pointSeries(vectors, (byte)1,"Class2Points");
         XYSeries origin = new XYSeries("Origin");
@@ -119,9 +135,7 @@ public class Main {
         return chart;
     }
 
-    private static XYSeries lineSeries(List<SupportVector> vectors, String key) {
-        double[] b = deriveLine(vectors);
-
+    private static XYSeries lineSeries(List<SupportVector> vectors, String key, double[] b) {
         int res = 25;
         double[] range = range(vectors);
         double xStep = range[1] / ((double) res);
