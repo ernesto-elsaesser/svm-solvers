@@ -21,7 +21,7 @@ public class DualityProblem {
 
         RealVector[] x = new RealVector[] {nv1, nv2, nv3};
 
-        double[] aSolution = new double[] {0.68, 13.65, 8.42};
+        double[] aSolution = new double[] {-0.68, 13.65, 8.42};
         System.out.println(Arrays.toString(aSolution) + " : " + dualProblem(aSolution, Y, x));
         System.out.println("-------------------------------------");
 
