@@ -67,7 +67,7 @@ public class Main {
 
         for (SupportVector testVector:
                 testing) {
-            double res = testVector.x[0] * h.b0 + testVector.x[1] * h.b2 + h.b0;
+            double res = testVector.x[0] * h.b1 + testVector.x[1] * h.b2 + h.b0;
             if (res <= 0 && ((int)testVector.y) == 0)
                 rightClassification++;
         }
