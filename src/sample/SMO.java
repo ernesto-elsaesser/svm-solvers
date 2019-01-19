@@ -25,8 +25,6 @@ package sample;
 import java.util.*;
 import java.util.Map.Entry;
 
-import java.io.Serializable;
-
 /**
  * An implementation of the Sequential Minimal Optimization (SMO) algorithm
  * described by J C Platt (1998) in
@@ -38,19 +36,13 @@ import java.io.Serializable;
  */
 class SMO {
     private static final Random random = new Random();
-    /** The SVM to be trained */
     private SVM svm;
-    /** The error cache */
-    private Map<SupportVector,Double> errorCache =
-            new HashMap<SupportVector,Double>();
+    private Map<SupportVector,Double> errorCache = new HashMap<>();
 
     public SMO(SVM svm) {
         this.svm = svm;
     }
 
-    /**
-     * Perform SMO.
-     */
     public void train() {
         int numChanged = 0;
         boolean examineAll = true; // examine entire training set initially
@@ -69,12 +61,6 @@ class SMO {
         }
     }
 
-    /**
-     * Attempt to optimise the given example.
-     *
-     * @param v  the example to optimise
-     * @return   true iff positive progress was made
-     */
     private boolean examineExample(SupportVector v) {
         if(satisfiesKKTConditions(v)) // not eligible for optimisation
             return false;
@@ -102,27 +88,12 @@ class SMO {
         return false;
     }
 
-    /**
-     * Get the error of the given example.
-     *
-     * @param v  the example
-     * @return   the error
-     */
     private double error(SupportVector v) {
         if(errorCache.containsKey(v))
             return errorCache.get(v);
         return svm.output(v.x) - v.y;
     }
 
-    /**
-     * Does the given vector satisfy the Karush-Kuhn-Tucker (KKT) conditions?
-     *         alpha = 0 => y u >= 1
-     *     0 < alpha < C => y u = 1
-     *         alpha = C => y u <= 1
-     *
-     * @param v  the vector to check
-     * @return   true iff the KKT conditions are satisfied (to within epsilon)
-     */
     private boolean satisfiesKKTConditions(SupportVector v) {
         final double r = error(v) * v.y; // (u-y)*y = y*u-1
         // (r >= 0 or alpha >= C) and (r <= 0 or alpha <= 0)
@@ -246,8 +217,7 @@ class SMO {
 }
 
 
-class SVM implements Serializable {
-    private static final long serialVersionUID = 7667970753574953210L;
+class SVM {
     public static final double EPSILON = 1e-3;
     /**
      * The support vectors
@@ -271,29 +241,11 @@ class SVM implements Serializable {
         this.c = 1.0;
     }
 
-    public void add(DataVector x, int y) {
+    public void add(MyVector x, int y) {
         vectors.add(new SupportVector(x, y));
     }
 
-    /**
-     * Throw away all non-support vectors.
-     */
-    public void prune() {
-        Iterator<SupportVector> iter = vectors.iterator();
-        while(iter.hasNext())
-            if(iter.next().alpha <= EPSILON)
-                iter.remove();
-    }
-
-    /**
-     * Return the number of support vectors.
-     * @return  the number of support vectors
-     */
-    public int size() {
-        return vectors.size();
-    }
-
-    public double output(DataVector x) {
+    public double output(MyVector x) {
         // $u = \sum_j \alpha_j y_j K(x_j, x) - b$
         double u = -b;
         for(SupportVector v : vectors) {
@@ -309,16 +261,9 @@ class SVM implements Serializable {
     }
 }
 
-/**
- * A data class to store an input vector, its target class, and its
- * corresponding Lagrange multiplier.
- *
- * @author  David A Roberts
- */
-class SupportVector implements Serializable {
-    private static final long serialVersionUID = 2454189485098040287L;
+class SupportVector {
     /** The input vector */
-    final DataVector x;
+    final MyVector x;
     /** The target class: either +1 or -1 */
     final byte y;
     /** The Lagrange multiplier for this example */
@@ -326,7 +271,7 @@ class SupportVector implements Serializable {
     /** Is the Lagrange multiplier bound? (Only used by SMO) */
     transient boolean bound = true;
 
-    public SupportVector(DataVector x, int y) {
+    public SupportVector(MyVector x, int y) {
         if(Math.abs(y) != 1)
             throw new IllegalArgumentException("y must be either +1 or -1");
         this.x = x;
@@ -334,102 +279,49 @@ class SupportVector implements Serializable {
     }
 }
 
-interface DataVector extends Serializable {
-    /**
-     * Return the dot product of this vector and another vector.
-     *
-     * @param x  the other vector
-     * @return   the dot product
-     */
-    double dotProduct(DataVector x);
-
-    /**
-     * Return the square distance of the given vector from this vector.
-     *
-     * @param x  the other vector
-     * @return   the square distance
-     */
-    double sqDist(DataVector x);
-}
-
-interface Kernel extends Serializable {
-    /**
-     * Get the value of the kernel function for the two vectors.
-     * @param x1  the first vector
-     * @param x2  the second vector
-     * @return    the value
-     */
-    double getValue(DataVector x1, DataVector x2);
+interface Kernel {
+    double getValue(MyVector x1, MyVector x2);
 }
 
 class LinearKernel implements Kernel {
-    private static final long serialVersionUID = -7766434087172972402L;
-
-    public double getValue(DataVector x1, DataVector x2) {
+    public double getValue(MyVector x1, MyVector x2) {
         return x1.dotProduct(x2);
     }
 }
 
 class MathUtil {
-    /**
-     * Is x == y to within the given tolerance?
-     */
     public static boolean equals(double x, double y, double epsilon) {
         return Math.abs(x - y) < epsilon;
     }
 
-    /**
-     * Is x <= y to within the given tolerance?
-     */
     public static boolean leq(double x, double y, double epsilon) {
         return x <= y + epsilon;
     }
 
-    /**
-     * Is x >= y to within the given tolerance?
-     */
     public static boolean geq(double x, double y, double epsilon) {
         return x >= y - epsilon;
     }
 
-    /**
-     * Clamp the given value to a given range.
-     * If it falls outside the range, it is set to the closest bound.
-     *
-     * @param x     the value to clamp
-     * @param low   the lower bound
-     * @param high  the upper bound
-     * @return      the clamped value (low <= x <= high)
-     */
     public static double clamp(double x, double low, double high) {
         return Math.min(Math.max(x, low), high);
     }
 }
 
-class RealVector implements DataVector {
-    private static final long serialVersionUID = -8736795465347538756L;
+class MyVector {
     private final double[] vector;
 
-    public RealVector(double... vector) {
+    public MyVector(double... vector) {
         this.vector = vector;
     }
 
-    public double dotProduct(DataVector x) {
-        return dotProduct((RealVector) x);
-    }
-
-    public double dotProduct(RealVector x) {
+    public double dotProduct(MyVector x) {
         double prod = 0;
         for(int i = 0; i < vector.length; i++)
             prod += vector[i] * x.vector[i];
         return prod;
     }
 
-    public double sqDist(DataVector x) {
-        return sqDist((RealVector) x);
-    }
-
-    public double sqDist(RealVector x) {
+    public double sqDist(MyVector x) {
         double r2 = 0;
         for(int i = 0; i < vector.length; i++) {
             double d = vector[i] - x.vector[i];
