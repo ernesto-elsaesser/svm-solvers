@@ -34,11 +34,10 @@ public class Main {
 
         List<SupportVector> training = null;
         List<SupportVector> testing = null;
-        try {
 
+        try {
             training = parse("data/svmguide1.csv");
             testing = parse("data/svmguide1-t.csv");
-            // TODO: apply SVM
         } catch (Exception e) {
             System.out.println("Error loading CSV: " + e.getLocalizedMessage());
             return;
@@ -117,17 +116,14 @@ public class Main {
     }
 
     private static JFreeChart createChart(List<SupportVector> vectors, Hyperplane h) {
-        XYSeries hyperplane = lineSeries(vectors, h,"Hyperplane");
         XYSeries class1points = pointSeries(vectors, (byte)0, "Class1Points");
         XYSeries class2points = pointSeries(vectors, (byte)1,"Class2Points");
-        XYSeries origin = new XYSeries("Origin");
-        origin.add(0, 0);
+        XYSeries hyperplane = lineSeries(vectors, h,"Hyperplane");
 
         XYSeriesCollection dataset = new XYSeriesCollection();
         dataset.addSeries(hyperplane);
         dataset.addSeries(class1points);
         dataset.addSeries(class2points);
-        //dataset.addSeries(origin);
 
         JFreeChart chart = ChartFactory.createXYLineChart("SVMChart", "",
                 "", dataset, PlotOrientation.VERTICAL, false, false, false);
@@ -135,7 +131,7 @@ public class Main {
         XYPlot plot = (XYPlot) chart.getPlot();
         XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
         renderer.setSeriesLinesVisible(0, true);
-        renderer.setSeriesShapesVisible(0, false);
+        renderer.setSeriesShapesVisible(0, true);
         renderer.setSeriesPaint(0, Color.black);
         renderer.setSeriesLinesVisible(1, false);
         renderer.setSeriesShapesVisible(1, true);
@@ -150,49 +146,45 @@ public class Main {
     }
 
     private static XYSeries lineSeries(List<SupportVector> vectors, Hyperplane h, String key) {
-        int res = 25;
-        double[] range = range(vectors);
-        double xStep = range[1] / ((double) res);
         XYSeries series = new XYSeries(key);
+
+        double xMin = 0.0;
+        double xMax = 0.0;
+        double yMin = 0.0;
+        double yMax = 0.0;
+        for (SupportVector v : vectors) {
+            if (v.x[0] > xMax) {
+                xMax = v.x[0];
+            }
+            if (v.x[1] > yMax) {
+                yMax = v.x[1];
+            }
+            if (v.x[0] < xMin) {
+                xMin = v.x[0];
+            }
+            if (v.x[1] < yMin) {
+                yMin = v.x[1];
+            }
+        }
         if (h.b2 == 0) {
-            series.add(-h.b0, range[0]);
-            series.add(-h.b0, range[1]);
+            series.add(-h.b0, yMin);
+            series.add(-h.b0, yMax);
         } else {
-            for(int i = 0; i < res; i++) {
-                double x = i * xStep;
+            int res = 50;
+            double xStep = (xMax - xMin) / (double)res;
+            for(int i = -3; i < res+3; i++) {
+                double x = xMin + i * xStep;
                 double y = lineFunc(h, x);
-                if (y >= range[0] || y <= range[1]) {
+                if (y >= 0.66 * yMin && y <= 1.5 * yMax) {
                     series.add(x, y);
                 }
             }
         }
-
         return series;
     }
 
     private static double lineFunc(Hyperplane h, double x) {
         return -(x * h.b1 + h.b0) / h.b2;
-    }
-
-    private static double[] range(List<SupportVector> vectors) {
-        double max = 0.0;
-        double min = 0.0;
-        for (SupportVector v : vectors) {
-            if (v.x[0] > max) {
-                max = v.x[0];
-            }
-            if (v.x[1] > max) {
-                max = v.x[1];
-            }
-            if (v.x[0] < min) {
-                min = v.x[0];
-            }
-            if (v.x[1] < min) {
-                min = v.x[1];
-            }
-        }
-        double[] range = {min, max};
-        return range;
     }
 
     private static XYSeries pointSeries(List<SupportVector> vectors, byte y, String key) {
