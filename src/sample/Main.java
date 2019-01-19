@@ -59,6 +59,8 @@ public class Main {
         panel.setPreferredSize(f.getSize());
         f.setContentPane(panel);
         SwingUtilities.updateComponentTreeUI(f);
+
+        classifyNewData(testing, h);
     }
 
     private static void classifyNewData(List<SupportVector> testing, Hyperplane h) {
