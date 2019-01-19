@@ -12,7 +12,14 @@ public class SupportVector {
     transient boolean bound = true;
 
     public SupportVector(double x1, double x2, int y) {
-        double[] x = {x1, x2};
+        this(new double[] {x1, x2}, y);
+    }
+
+    public SupportVector(double x1, double x2, double x3, double x4, int y) {
+        this(new double[] {x1, x2, x3, x4}, y);
+    }
+
+    public SupportVector(double[] x, int y) {
         this.x = x;
         if (y >= 1) {
             this.y = (byte)1;
