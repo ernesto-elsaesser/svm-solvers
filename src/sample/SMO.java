@@ -108,9 +108,9 @@ class SMO {
         if(l == h) // the alpha values are constrained to a single point
             return false;
 
-        final double k11 = svm.kernel.getValue(v1.x, v1.x),
-                k12 = svm.kernel.getValue(v1.x, v2.x),
-                k22 = svm.kernel.getValue(v2.x, v2.x);
+        final double k11 = svm.kernelFunc(v1.x, v1.x),
+                k12 = svm.kernelFunc(v1.x, v2.x),
+                k22 = svm.kernelFunc(v2.x, v2.x);
         final double s = y1 * y2;
         final double e1 = error(v1), e2 = error(v2);
 
@@ -152,8 +152,8 @@ class SMO {
         for(SupportVector v : svm.vectors) {
             if(v.bound) continue; // bound examples are not cached
             if(v == v1 || v == v2) continue;
-            final double k1 = svm.kernel.getValue(v1.x, v.x),
-                    k2 = svm.kernel.getValue(v2.x, v.x);
+            final double k1 = svm.kernelFunc(v1.x, v.x),
+                    k2 = svm.kernelFunc(v2.x, v.x);
             double error = errorCache.get(v);
             error += delta1*k1 + delta2*k2 + b - svm.b; // equation (12.11)
             errorCache.put(v, error);
