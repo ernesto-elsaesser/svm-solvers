@@ -61,6 +61,19 @@ public class Main {
         SwingUtilities.updateComponentTreeUI(f);
     }
 
+    private static void classifyNewData(List<SupportVector> testing, Hyperplane h) {
+        int rightClassification = 0;
+
+        for (SupportVector testVector:
+                testing) {
+            double res = testVector.x[0] * h.b0 + testVector.x[1] * h.b2 + h.b0;
+            if (res <= 0 && ((int)testVector.y) == 0)
+                rightClassification++;
+        }
+
+        System.out.println("Zuverlässigkeit " + (((double)rightClassification / testing.size()) * 100) + "%");
+    }
+
     private static void solve(List<SupportVector> vectors) {
         SVM svm = new SVM();
         svm.vectors = vectors;
