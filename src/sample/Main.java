@@ -38,17 +38,17 @@ public class Main {
             return;
         }
 
-        // simple example 1
-        //SupportVector v1 = new SupportVector({4.0,2.0}, (byte)0);
-        //double[][] points = {{4.0,2.0},{2.0,5.0},{3.0,8.0}};
-        //classes = new int[]{-1, -1, 1};
-        double[] wrongAlphas = {-0.679,13.654,8.419};
+        List<SupportVector> example1 = new ArrayList<>();
+        example1.add(new SupportVector(4.0, 2.0, (byte)0));
+        example1.add(new SupportVector(2.0, 5.0, (byte)0));
+        example1.add(new SupportVector(3.0, 8.0, (byte)1));
+
+        List<SupportVector> example2 = new ArrayList<>();
+        example2.add(new SupportVector(2.0, 1.0, (byte)0));
+        example2.add(new SupportVector(2.0, -1.0, (byte)0));
+        example2.add(new SupportVector(4.0, 0.0, (byte)1));
 
         solve(training);
-
-        //double[][] points = {{2.0,1.0},{2.0,-1.0},{4.0,0.0}};
-        //int[] classes = {-1, -1, 1};
-        //double[] alphas = {3.25,3.25,3.5};
 
         JFreeChart chart = createChart(training);
         ChartPanel panel = new ChartPanel(chart);
@@ -145,13 +145,11 @@ public class Main {
     private static double[] deriveLine(List<SupportVector> vectors) {
         double[] b = {0,0,0};
         for (SupportVector v : vectors) {
-            double t = v.alpha * (double)v.y;
-            b[1] += t * v.x[0];
-            b[2] += t * v.x[1];
+            b[1] += v.alpha * v.sign() * v.x[0];
+            b[2] += v.alpha * v.sign() * v.x[1];
         }
-        SupportVector vi = vectors.get(0);
-        double yi = (double)vi.y;
-        b[0] = (1/yi) - (vi.x[0] * b[1] + vi.x[1] * b[2]);
+        SupportVector v = vectors.get(0);
+        b[0] = v.sign() - (v.x[0] * b[1] + v.x[1] * b[2]);
         return b;
     }
 

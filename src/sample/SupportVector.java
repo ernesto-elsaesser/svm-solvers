@@ -16,4 +16,8 @@ public class SupportVector {
         this.x = x;
         this.y = y;
     }
+
+    public double sign() {
+        return y == 0 ? -1.0 : 1.0;
+    }
 }
