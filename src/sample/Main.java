@@ -32,22 +32,14 @@ public class Main {
         f.setLayout(null);
         f.setVisible(true);
 
-        List<SupportVector> training = null;
-        List<SupportVector> testing = null;
-
-        try {
-            training = parse("data/fourclass.csv");
-            testing = parse("data/fourclass-t.csv");
-        } catch (Exception e) {
-            System.out.println("Error loading CSV: " + e.getLocalizedMessage());
-            return;
-        }
+        List<SupportVector> training = parse("data/fourclass.csv");
+        List<SupportVector> testing = parse("data/fourclass-t.csv");
 
         Hyperplane h = new Hyperplane();
         if (USE_CACHED_PLANE) {
-            h.b0 = -2.425374;
-            h.b1 = 0.0455677;
-            h.b2 = 0.0379284;
+            h.b0 = -4.5;
+            h.b1 = 0.6;
+            h.b2 = 0.4;
         } else {
             solve(training);
             h = deriveHyperplane(training);
@@ -89,14 +81,23 @@ public class Main {
             h.b1 += v.alpha * v.sign() * v.x[0];
             h.b2 += v.alpha * v.sign() * v.x[1];
         }
-        SupportVector v = vectors.get(0);
-        h.b0 = v.sign() - (v.x[0] * h.b1 + v.x[1] * h.b2);
-        return h;
+        for (SupportVector v : vectors) {
+            if (v.alpha > 0.0) {
+                h.b0 = v.sign() - (v.x[0] * h.b1 + v.x[1] * h.b2);
+                return h;
+            }
+        }
+        throw new IllegalArgumentException("all alphas are zero");
     }
 
-    private static List<SupportVector> parse(String filename) throws Exception {
-        CSVReader reader = new CSVReader(new FileReader(filename), ' ');
-        List<String[]> lines = reader.readAll();
+    private static List<SupportVector> parse(String filename) {
+        List<String[]> lines;
+        try {
+            CSVReader reader = new CSVReader(new FileReader(filename), ' ');
+            lines = reader.readAll();
+        } catch (Exception e) {
+            lines = new ArrayList<>();
+        }
         int num = lines.size();
         List<SupportVector> vectors = new ArrayList<>();
         for (int i = 0; i < num; i++) {
@@ -199,17 +200,17 @@ public class Main {
 
     private static List<SupportVector> simpleSet1() {
         List<SupportVector> list = new ArrayList<>();
-        list.add(new SupportVector(4.0, 2.0, (byte)0));
-        list.add(new SupportVector(2.0, 5.0, (byte)0));
-        list.add(new SupportVector(3.0, 8.0, (byte)1));
+        list.add(new SupportVector(4.0, 2.0, 0));
+        list.add(new SupportVector(2.0, 5.0, 0));
+        list.add(new SupportVector(3.0, 8.0, 1));
         return list;
     }
 
     private static List<SupportVector> simpleSet2() {
         List<SupportVector> list = new ArrayList<>();
-        list.add(new SupportVector(2.0, 1.0, (byte)0));
-        list.add(new SupportVector(2.0, -1.0, (byte)0));
-        list.add(new SupportVector(4.0, 0.0, (byte)1));
+        list.add(new SupportVector(2.0, 1.0, 0));
+        list.add(new SupportVector(2.0, -1.0, 0));
+        list.add(new SupportVector(4.0, 0.0, 1));
         return list;
     }
 }
