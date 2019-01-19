@@ -72,7 +72,6 @@ public class Main {
         svm.vectors = vectors;
         SMO smo = new SMO(svm);
         smo.train();
-        svm.prune();
     }
 
     private static Hyperplane deriveHyperplane(List<SupportVector> vectors) {
