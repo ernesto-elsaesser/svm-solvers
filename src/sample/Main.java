@@ -2,6 +2,7 @@ package sample;
 
 import java.awt.*;
 import java.io.FileReader;
+import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
 import com.opencsv.CSVReader;
@@ -35,13 +36,39 @@ public class Main {
 
         double[][] points = {{4.0,2.0},{2.0,5.0},{3.0,8.0}};
         int[] classes = {-1, -1, 1};
-        double[] alphas = {-8.42,-13.65,0.68};
-        JFreeChart chart = createChart(points, classes, alphas);
+        double[] wrongAlphas = {-0.679,13.654,8.419};
+        double[] optimizedAlphas = calcAlphas(points, classes);
 
+        //double[][] points = {{2.0,1.0},{2.0,-1.0},{4.0,0.0}};
+        //int[] classes = {-1, -1, 1};
+        //double[] alphas = {3.25,3.25,3.5};
+
+        JFreeChart chart = createChart(points, classes, optimizedAlphas);
         ChartPanel panel = new ChartPanel(chart);
         panel.setPreferredSize(f.getSize());
         f.setContentPane(panel);
         SwingUtilities.updateComponentTreeUI(f);
+    }
+
+    private static double[] calcAlphas(double[][] points, int[] classes) {
+        SVM svm = new SVM();
+        List<SupportVector> vectors = new ArrayList<>();
+        for (int i = 0; i < points.length; i++) {
+            DataVector d = new RealVector(points[i]);
+            SupportVector v = new SupportVector(d, classes[i]);
+            vectors.add(v);
+        }
+        svm.vectors = vectors;
+
+        SMO smo = new SMO(svm);
+        smo.train();
+
+        double[] alphas = new double[points.length];
+        for(int i = 0; i < points.length; i++) {
+            SupportVector v = svm.vectors.get(i);
+            alphas[i] = v.alpha;
+        }
+        return alphas;
     }
 
     private static double[][] parse(String filename) throws Exception {
@@ -68,11 +95,14 @@ public class Main {
         XYSeries hyperplane = lineSeries(points, classes, alphas, "Hyperplane");
         XYSeries class1points = pointSeries(points, classes, 1, "Class1Points");
         XYSeries class2points = pointSeries(points, classes, -1,"Class2Points");
+        XYSeries origin = new XYSeries("Origin");
+        origin.add(0, 0);
 
         XYSeriesCollection dataset = new XYSeriesCollection();
         dataset.addSeries(hyperplane);
         dataset.addSeries(class1points);
         dataset.addSeries(class2points);
+        //dataset.addSeries(origin);
 
         JFreeChart chart = ChartFactory.createXYLineChart("SVMChart", "",
                 "", dataset, PlotOrientation.VERTICAL, false, false, false);
@@ -95,46 +125,65 @@ public class Main {
     }
 
     private static XYSeries lineSeries(double[][] points, int[] classes, double[] alphas, String key) {
-        double[] max = maxValues(points);
-        double b1 = 0.0;
-        double b2 = 0.0;
-        for (int i = 0; i < points.length; i++) {
-            double t = alphas[i] * (double)classes[i];
-            b1 += t * points[i][0];
-            b2 += t * points[i][1];
-        }
-        double[] anyP = points[0];
-        double b0 = -(anyP[0] * b1 + anyP[1] * b2);
+        double[] b = deriveLine(points, classes, alphas);
 
         int res = 25;
+        double[] range = range(points);
+        double xStep = range[1] / ((double) res);
         XYSeries series = new XYSeries(key);
-        double xStep = max[0] / ((double) res);
-        for(int i = 0; i < res; i++) {
-            double x = i * xStep;
-            double y = lineFunc(b0, b1, b2, x);
-            if (y < max[1]) {
-                series.add(x, y);
+        if (b[2] == 0) {
+            series.add(-b[0], range[0]);
+            series.add(-b[0], range[1]);
+        } else {
+            for(int i = 0; i < res; i++) {
+                double x = i * xStep;
+                double y = lineFunc(b, x);
+                if (y >= range[0] || y <= range[1]) {
+                    series.add(x, y);
+                }
             }
         }
+
         return series;
     }
 
-    private static double lineFunc(double b0, double b1, double b2, double x) {
-        return -(x * b1 + b0) / b2;
+    private static double[] deriveLine(double[][] points, int[] classes, double[] alphas) {
+        double[] b = {0,0,0};
+        for (int i = 0; i < points.length; i++) {
+            double t = alphas[i] * (double)classes[i];
+            b[1] += t * points[i][0];
+            b[2] += t * points[i][1];
+        }
+        double[] pi = points[0];
+        double yi = (double)classes[0];
+        b[0] = (1/yi) - (pi[0] * b[1] + pi[1] * b[2]);
+        return b;
     }
 
-    private static double[] maxValues(double[][] points) {
-        double[] max = {0.0, 0.0};
+    private static double lineFunc(double[] b, double x) {
+        return -(x * b[1] + b[0]) / b[2];
+    }
+
+    private static double[] range(double[][] points) {
+        double max = 0.0;
+        double min = 0.0;
         for (int i = 0; i < points.length; i++) {
             double[] p = points[i];
-            if (p[0] > max[0]) {
-                max[0] = p[0];
+            if (p[0] > max) {
+                max = p[0];
             }
-            if (p[1] > max[1]) {
-                max[1] = p[1];
+            if (p[1] > max) {
+                max = p[1];
+            }
+            if (p[0] < min) {
+                min = p[0];
+            }
+            if (p[1] < min) {
+                min = p[1];
             }
         }
-        return max;
+        double[] range = {min, max};
+        return range;
     }
 
     private static XYSeries pointSeries(double[][] points, int[] classes, int c, String key) {
