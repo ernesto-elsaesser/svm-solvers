@@ -7,13 +7,10 @@ public class SVM {
 
     public static final double EPSILON = 1e-3;
 
-    List<SupportVector> vectors = new ArrayList<>();
+    List<SupportVector> vectors;
     double b = 0; // treshold
     double c = 1.0; // soft-margin parameter
 
-    public void add(double[] vector, int y) {
-        vectors.add(new SupportVector(vector, y));
-    }
 
     public double output(double[] x) {
         // $u = \sum_j \alpha_j y_j K(x_j, x) - b$
@@ -25,6 +22,15 @@ public class SVM {
         }
         return u;
     }
+
+    public void prune() {
+        for (SupportVector v: vectors) {
+            if (v.alpha < EPSILON) {
+                v.alpha = 0;
+            }
+        }
+    }
+
 
     public double kernelFunc(double[] x1, double[] x2) {
         // simple dot product = linear kernel
