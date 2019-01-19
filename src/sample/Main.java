@@ -38,6 +38,8 @@ public class Main {
             return;
         }
 
+        // simple example 1
+        //SupportVector v1 = new SupportVector({4.0,2.0}, (byte)0);
         //double[][] points = {{4.0,2.0},{2.0,5.0},{3.0,8.0}};
         //classes = new int[]{-1, -1, 1};
         double[] wrongAlphas = {-0.679,13.654,8.419};
@@ -72,9 +74,8 @@ public class Main {
             String[] line = lines.get(i);
             double x1 = parseValue(line[1]);
             double x2 = parseValue(line[2]);
-            double[] x = {x1, x2};
             byte y = (byte) Integer.parseInt(line[0]);
-            SupportVector v = new SupportVector(x, y);
+            SupportVector v = new SupportVector(x1, x2, y);
             vectors.add(v);
         }
         return vectors;

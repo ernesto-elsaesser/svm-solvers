@@ -11,10 +11,9 @@ public class SupportVector {
     /** Is the Lagrange multiplier bound? */
     transient boolean bound = true;
 
-    public SupportVector(double[] vector, int y) {
-        if(Math.abs(y) != 1)
-            throw new IllegalArgumentException("y must be either +1 or -1");
-        this.x = vector;
-        this.y = (byte) y;
+    public SupportVector(double x1, double x2, byte y) {
+        double[] x = {x1, x2};
+        this.x = x;
+        this.y = y;
     }
 }
