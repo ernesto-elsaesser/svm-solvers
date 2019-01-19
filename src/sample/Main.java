@@ -7,6 +7,7 @@ import java.util.List;
 import javax.swing.*;
 import com.opencsv.CSVReader;
 
+import javafx.util.Pair;
 import org.jfree.chart.*;
 import org.jfree.chart.plot.*;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
@@ -26,24 +27,27 @@ public class Main {
         f.setLayout(null);
         f.setVisible(true);
 
+        Pair<double[][], int[]> training = null;
+        Pair<double[][], int[]> testing = null;
         try {
-            double[][] training = parse("data/svmguide1.csv");
-            double[][] testing = parse("data/svmguide1-t.csv");
+
+            training = parse("data/svmguide1.csv");
+            testing = parse("data/svmguide1-t.csv");
             // TODO: apply SVM
         } catch (Exception e) {
             System.out.println("Error loading CSV: " + e.getLocalizedMessage());
         }
 
-        double[][] points = {{4.0,2.0},{2.0,5.0},{3.0,8.0}};
-        int[] classes = {-1, -1, 1};
+        //double[][] points = {{4.0,2.0},{2.0,5.0},{3.0,8.0}};
+        //classes = new int[]{-1, -1, 1};
         double[] wrongAlphas = {-0.679,13.654,8.419};
-        double[] optimizedAlphas = calcAlphas(points, classes);
+        double[] optimizedAlphas = calcAlphas(training.getKey(), training.getValue());
 
         //double[][] points = {{2.0,1.0},{2.0,-1.0},{4.0,0.0}};
         //int[] classes = {-1, -1, 1};
         //double[] alphas = {3.25,3.25,3.5};
 
-        JFreeChart chart = createChart(points, classes, optimizedAlphas);
+        JFreeChart chart = createChart(training.getKey(), training.getValue(), optimizedAlphas);
         ChartPanel panel = new ChartPanel(chart);
         panel.setPreferredSize(f.getSize());
         f.setContentPane(panel);
@@ -71,10 +75,11 @@ public class Main {
         return alphas;
     }
 
-    private static double[][] parse(String filename) throws Exception {
+    private static Pair<double[][], int[]> parse(String filename) throws Exception {
         CSVReader reader = new CSVReader(new FileReader(filename), ' ');
         List<String[]> lines = reader.readAll();
         int num = lines.size();
+        int classes[] = new int[num];
         double[][] values = new double[num][4];
         for (int i = 0; i < num; i++) {
             String[] line = lines.get(i);
@@ -82,8 +87,17 @@ public class Main {
             values[i][1] = parseValue(line[2]);
             values[i][2] = parseValue(line[3]);
             values[i][3] = parseValue(line[4]);
+
+            classes[i] = normalizeClassification(Integer.parseInt(line[0]));
         }
-        return values;
+        return new Pair<>(values, classes);
+    }
+
+    private static int normalizeClassification(int parsedInt) {
+        if (parsedInt == 0)
+            return -1;
+        else
+            return 1;
     }
 
     private static double parseValue(String s) {
