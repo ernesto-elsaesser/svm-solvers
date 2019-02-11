@@ -24,14 +24,6 @@ public class SVM {
         return u;
     }
 
-    public void prune() {
-        for (SupportVector v: vectors) {
-            if (v.alpha < EPSILON) {
-                v.alpha = 0;
-            }
-        }
-    }
-
     public double kernelFunc(double[] x1, double[] x2) {
 
         double prod = 0;
