@@ -7,6 +7,7 @@ public class SVM {
 
     public static final double EPSILON = 1e-3;
 
+    public boolean dataIsLinearilySeparatable = false;
     List<SupportVector> vectors;
     double b = 0; // treshold
     double c = 1.0; // soft-margin parameter
@@ -31,12 +32,21 @@ public class SVM {
         }
     }
 
-
     public double kernelFunc(double[] x1, double[] x2) {
-        // simple dot product = linear kernel
+
         double prod = 0;
-        for(int i = 0; i < x2.length; i++)
-            prod += x1[i] * x2[i];
+        if(dataIsLinearilySeparatable){
+            // dot product kernel
+            for(int i = 0; i < x2.length; i++)
+                prod += x1[i] * x2[i];
+        }
+        else{
+            // polynomial kernel
+            for(int i = 0; i < x2.length; i++){
+                double t  = 1 + (x1[i] * x2[i]);
+                prod += Math.pow(t, 2);
+            }
+        }
         return prod;
     }
 }

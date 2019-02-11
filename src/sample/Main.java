@@ -14,7 +14,9 @@ import org.jfree.data.xy.*;
 
 public class Main {
 
-    public static boolean USE_CACHED_PLANE = false;
+    private static int DATA_SET = 2;
+    private static boolean USE_CACHED_PLANE = false;
+    private static boolean USE_SMO = false;
 
     static class Hyperplane {
         double b0 = 0, b1 = 0, b2 = 0;
@@ -32,8 +34,34 @@ public class Main {
         f.setLayout(null);
         f.setVisible(true);
 
-        List<SupportVector> training = parse("data/fourclass.csv");
-        List<SupportVector> testing = parse("data/fourclass-t.csv");
+        ExtendedSVM svm = new ExtendedSVM();
+        List<SupportVector> testData = null;
+        switch (DATA_SET) {
+            case 0:
+                svm.vectors = parse("fourclass");
+                testData = parse("fourclass-t");
+                break;
+            case 1:
+                svm.vectors = parse("svmguide1");
+                testData = parse("svmguide1-t");
+                break;
+            case 2:
+                svm.vectors = parse("separatable");
+                svm.dataIsLinearilySeparatable = true;
+                break;
+            case 3:
+                svm.vectors = parse("circular");
+                break;
+            case 4:
+                svm.vectors = parse("threepoint1");
+                svm.dataIsLinearilySeparatable = true;
+                break;
+            case 5:
+                svm.vectors = parse("threepoint2");
+                svm.dataIsLinearilySeparatable = true;
+                break;
+        }
+        List<SupportVector> originalVectors = svm.vectors;
 
         Hyperplane h = new Hyperplane();
         if (USE_CACHED_PLANE) {
@@ -41,17 +69,26 @@ public class Main {
             h.b1 = 0.6;
             h.b2 = 0.4;
         } else {
-            solve(training);
-            h = deriveHyperplane(training);
+            if (USE_SMO) {
+                SMO smo = new SMO(svm);
+                smo.train();
+            } else {
+                svm.c = 1000; // large c -> narrow margin
+                ESZ esz = new ESZ(svm);
+                esz.run();
+            }
+            h = deriveHyperplane(originalVectors);
         }
 
-        JFreeChart chart = createChart(training, h);
+        JFreeChart chart = createChart(originalVectors, h);
         ChartPanel panel = new ChartPanel(chart);
         panel.setPreferredSize(f.getSize());
         f.setContentPane(panel);
         SwingUtilities.updateComponentTreeUI(f);
 
-        classifyNewData(testing, h);
+        if (testData != null) {
+            classifyNewData(testData, h);
+        }
     }
 
     private static void classifyNewData(List<SupportVector> testing, Hyperplane h) {
@@ -65,13 +102,6 @@ public class Main {
         }
 
         System.out.println("Zuverlässigkeit " + (((double)rightClassification / testing.size()) * 100) + "%");
-    }
-
-    private static void solve(List<SupportVector> vectors) {
-        SVM svm = new SVM();
-        svm.vectors = vectors;
-        SMO smo = new SMO(svm);
-        smo.train();
     }
 
     private static Hyperplane deriveHyperplane(List<SupportVector> vectors) {
@@ -92,7 +122,7 @@ public class Main {
     private static List<SupportVector> parse(String filename) {
         List<String[]> lines;
         try {
-            CSVReader reader = new CSVReader(new FileReader(filename), ' ');
+            CSVReader reader = new CSVReader(new FileReader("data/" + filename + ".csv"), ' ');
             lines = reader.readAll();
         } catch (Exception e) {
             lines = new ArrayList<>();
@@ -195,21 +225,5 @@ public class Main {
             }
         }
         return series;
-    }
-
-    private static List<SupportVector> simpleSet1() {
-        List<SupportVector> list = new ArrayList<>();
-        list.add(new SupportVector(4.0, 2.0, 0));
-        list.add(new SupportVector(2.0, 5.0, 0));
-        list.add(new SupportVector(3.0, 8.0, 1));
-        return list;
-    }
-
-    private static List<SupportVector> simpleSet2() {
-        List<SupportVector> list = new ArrayList<>();
-        list.add(new SupportVector(2.0, 1.0, 0));
-        list.add(new SupportVector(2.0, -1.0, 0));
-        list.add(new SupportVector(4.0, 0.0, 1));
-        return list;
     }
 }
