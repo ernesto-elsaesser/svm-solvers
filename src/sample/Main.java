@@ -16,7 +16,7 @@ public class Main {
 
     private static int DATA_SET = 2;
     private static boolean USE_CACHED_PLANE = false;
-    private static boolean USE_SMO = true;
+    private static boolean USE_SMO = false;
 
     static class Hyperplane {
         double b0 = 0, b1 = 0, b2 = 0;
