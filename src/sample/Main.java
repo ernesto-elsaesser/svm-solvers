@@ -16,7 +16,7 @@ public class Main {
 
     private static int DATA_SET = 2;
     private static boolean USE_CACHED_PLANE = false;
-    private static boolean USE_SMO = false;
+    private static boolean USE_SMO = true;
 
     static class Hyperplane {
         double b0 = 0, b1 = 0, b2 = 0;
@@ -34,7 +34,7 @@ public class Main {
         f.setLayout(null);
         f.setVisible(true);
 
-        ExtendedSVM svm = new ExtendedSVM();
+        SVM svm = new SVM();
         List<SupportVector> testData = null;
         switch (DATA_SET) {
             case 0:
@@ -73,7 +73,6 @@ public class Main {
                 SMO smo = new SMO(svm);
                 smo.train();
             } else {
-                svm.c = 1000; // large c -> narrow margin
                 ESZ esz = new ESZ(svm);
                 esz.run();
             }
