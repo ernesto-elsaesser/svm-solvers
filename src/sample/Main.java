@@ -19,7 +19,7 @@ public class Main {
     private static boolean USE_SMO = false;
 
     static class Hyperplane {
-        double b0 = 0, b1 = 0, b2 = 0;
+        double b = 0, w0 = 0, w1 = 0;
     }
 
     public static void main(String[] args) {
@@ -65,9 +65,9 @@ public class Main {
 
         Hyperplane h = new Hyperplane();
         if (USE_CACHED_PLANE) {
-            h.b0 = -4.2;
-            h.b1 = 0.6;
-            h.b2 = 0.4;
+            h.b = -4.2;
+            h.w0 = 0.6;
+            h.w1 = 0.4;
         } else {
             if (USE_SMO) {
                 SMO smo = new SMO(svm);
@@ -95,7 +95,7 @@ public class Main {
 
         for (SupportVector testVector:
                 testing) {
-            double res = testVector.x[0] * h.b1 + testVector.x[1] * h.b2 + h.b0;
+            double res = testVector.x[0] * h.w0 + testVector.x[1] * h.w1 + h.b;
             if (res <= 0 && ((int)testVector.y) == 0)
                 rightClassification++;
         }
@@ -106,12 +106,12 @@ public class Main {
     private static Hyperplane deriveHyperplane(List<SupportVector> vectors) {
         Hyperplane h = new Hyperplane();
         for (SupportVector v : vectors) {
-            h.b1 += v.alpha * v.sign() * v.x[0];
-            h.b2 += v.alpha * v.sign() * v.x[1];
+            h.w0 += v.alpha * v.sign() * v.x[0];
+            h.w1 += v.alpha * v.sign() * v.x[1];
         }
         for (SupportVector v : vectors) {
             if (v.alpha > 0.0) {
-                h.b0 = v.sign() - (v.x[0] * h.b1 + v.x[1] * h.b2);
+                h.b = v.sign() - (v.x[0] * h.w0 + v.x[1] * h.w1);
                 return h;
             }
         }
@@ -195,9 +195,9 @@ public class Main {
                 yMin = v.x[1];
             }
         }
-        if (h.b2 == 0) {
-            series.add(-h.b0, yMin);
-            series.add(-h.b0, yMax);
+        if (h.w1 == 0) {
+            series.add(-h.b, yMin);
+            series.add(-h.b, yMax);
         } else {
             int res = 50;
             double xStep = (xMax - xMin) / (double)res;
@@ -213,7 +213,7 @@ public class Main {
     }
 
     private static double lineFunc(Hyperplane h, double x) {
-        return -(x * h.b1 + h.b0) / h.b2;
+        return -(x * h.w0 + h.b) / h.w1;
     }
 
     private static XYSeries pointSeries(List<SupportVector> vectors, byte y, String key) {
