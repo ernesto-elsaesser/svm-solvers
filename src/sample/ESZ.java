@@ -1,7 +1,5 @@
 package sample;
 
-import java.util.*;
-
 public class ESZ {
 
 	private static final int ITERATIONS = 10000000;
@@ -46,7 +44,7 @@ public class ESZ {
 
 	private void fillSet(AlphaSet set, AlphaGenerator generator) {
 
-		// find valid alpha
+		// try out alpha combination until one is valid
 		while(true) {
 			int constrainedIndex = 0; // TODO: chose randomly
 			double sum = 0;
@@ -65,7 +63,7 @@ public class ESZ {
 			}
 		}
 
-		// calculate score
+		// calculate objective function
 		double s1 = 0;
 		double s2 = 0;
 
