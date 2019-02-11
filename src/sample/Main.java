@@ -16,8 +16,8 @@ public class Main {
 
     private static int DATA_SET = 3;
     private static boolean USE_CACHED_PLANE = false;
-    private static boolean USE_SMO = true;
-    private static boolean USE_POLY_KERNEL = false;
+    private static boolean USE_SMO = false;
+    private static boolean USE_POLY_KERNEL = true;
 
     static class Hyperplane {
         double b = 0, w0 = 0, w1 = 0;
@@ -80,7 +80,7 @@ public class Main {
         }
 
         JFreeChart chart;
-        if (USE_POLY_KERNEL)
+        if (!USE_POLY_KERNEL)
             chart = createChart(trainingVectors, h);
         else
             chart = testcreateChart(trainingVectors, svm);
