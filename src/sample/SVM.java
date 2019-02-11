@@ -20,7 +20,7 @@ public class SVM {
         for(SupportVector v : vectors) {
             if(v.alpha <= epsilon)
                 continue; // ignore non-support vectors
-            u += v.alpha * v.y * this.kernelFunc(v.x, x);
+            u += v.alpha * v.sign() * this.kernelFunc(v.x, x);
         }
         return u;
     }
