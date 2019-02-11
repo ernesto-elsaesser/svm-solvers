@@ -3,6 +3,9 @@ package sample;
 import java.util.*;
 
 class SMO {
+
+    private static final double EPSILON = 1e-3;
+
     private static final Random random = new Random();
     private SVM svm;
     private Map<SupportVector,Double> errorCache = new HashMap<>();
@@ -59,16 +62,27 @@ class SMO {
     private double error(SupportVector v) {
         if(errorCache.containsKey(v))
             return errorCache.get(v);
-        return svm.output(v.x) - v.y;
+        return this.output(v.x) - v.y;
+    }
+
+    private double output(double[] x) {
+        // $u = \sum_j \alpha_j y_j K(x_j, x) - b$
+        double u = -svm.b;
+        for(SupportVector v : svm.vectors) {
+            if(v.alpha <= EPSILON)
+                continue; // ignore non-support vectors
+            u += v.alpha * v.y * svm.dotKernel(v.x, x);
+        }
+        return u;
     }
 
     private boolean satisfiesKKTConditions(SupportVector v) {
         final double r = error(v) * v.y; // (u-y)*y = y*u-1
         // (r >= 0 or alpha >= C) and (r <= 0 or alpha <= 0)
-        return (this.geq(r, 0, SVM.EPSILON) ||
-                this.geq(v.alpha, svm.c, SVM.EPSILON)) &&
-                (this.leq(r, 0, SVM.EPSILON) ||
-                        this.leq(v.alpha, 0, SVM.EPSILON));
+        return (this.geq(r, 0, EPSILON) ||
+                this.geq(v.alpha, svm.c, EPSILON)) &&
+                (this.leq(r, 0, EPSILON) ||
+                        this.leq(v.alpha, 0, EPSILON));
     }
 
     private SupportVector secondChoice(double error) {
@@ -108,9 +122,9 @@ class SMO {
         if(l == h) // the alpha values are constrained to a single point
             return false;
 
-        final double k11 = svm.kernelFunc(v1.x, v1.x),
-                k12 = svm.kernelFunc(v1.x, v2.x),
-                k22 = svm.kernelFunc(v2.x, v2.x);
+        final double k11 = svm.dotKernel(v1.x, v1.x),
+                k12 = svm.dotKernel(v1.x, v2.x),
+                k22 = svm.dotKernel(v2.x, v2.x);
         final double s = y1 * y2;
         final double e1 = error(v1), e2 = error(v2);
 
@@ -128,17 +142,17 @@ class SMO {
         v2.alpha = this.clamp(v2.alpha, l, h); // equation (12.7)
 
         if(this.equals(v2.alpha, alpha2,
-                SVM.EPSILON*(v2.alpha+alpha2+SVM.EPSILON))) {
+                EPSILON*(v2.alpha+alpha2+EPSILON))) {
             // change in alpha2 was too small
             v2.alpha = alpha2;
             return false;
         }
 
         v1.alpha = alpha1 + s*(alpha2-v2.alpha); // equation (12.8)
-        v1.bound = this.leq(v1.alpha, 0, SVM.EPSILON) ||
-                this.geq(v1.alpha, svm.c, SVM.EPSILON);
-        v2.bound = this.leq(v2.alpha, 0, SVM.EPSILON) ||
-                this.geq(v2.alpha, svm.c, SVM.EPSILON);
+        v1.bound = this.leq(v1.alpha, 0, EPSILON) ||
+                this.geq(v1.alpha, svm.c, EPSILON);
+        v2.bound = this.leq(v2.alpha, 0, EPSILON) ||
+                this.geq(v2.alpha, svm.c, EPSILON);
 
         // update threshold
         final double b = svm.b;
@@ -152,8 +166,8 @@ class SMO {
         for(SupportVector v : svm.vectors) {
             if(v.bound) continue; // bound examples are not cached
             if(v == v1 || v == v2) continue;
-            final double k1 = svm.kernelFunc(v1.x, v.x),
-                    k2 = svm.kernelFunc(v2.x, v.x);
+            final double k1 = svm.dotKernel(v1.x, v.x),
+                    k2 = svm.dotKernel(v2.x, v.x);
             double error = errorCache.get(v);
             error += delta1*k1 + delta2*k2 + b - svm.b; // equation (12.11)
             errorCache.put(v, error);

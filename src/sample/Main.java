@@ -14,9 +14,9 @@ import org.jfree.data.xy.*;
 
 public class Main {
 
-    private static int DATA_SET = 2;
+    private static int DATA_SET = 0;
     private static boolean USE_CACHED_PLANE = false;
-    private static boolean USE_SMO = false;
+    private static boolean USE_SMO = true;
 
     static class Hyperplane {
         double b = 0, w0 = 0, w1 = 0;
