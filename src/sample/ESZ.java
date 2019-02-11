@@ -1,108 +1,130 @@
 package sample;
 
-import java.util.*;
-
 public class ESZ {
 
-	private SVM svm;
-    private final int iMax = 10000000;
+	private static final int ITERATIONS = 10000000;
+	private static final double EPSILON = 1e-5; // 1e-7;
+	private static final double DELTA = 0.00001;
 
-	public static final double EPSILON = 1e-5;//1e-7;
-	public static final double C = 1000; // large c -> narrow margin
+	class AlphaSet {
+		double[] alphas;
+		double score;
+	}
 
 	@FunctionalInterface
 	public interface AlphaGenerator {
-		double generateFor(SupportVector v);
+		double generate(int index);
 	}
 
-	private class Evolver implements AlphaGenerator {
-
-		private double delta   = 0.00001;
-
-		public double generateFor(SupportVector v) {
-			double offset = Math.random() * delta;
-			if (Math.random()<0.5) offset *= -1;
-			return v.alpha - offset;
-		}
-	}
+	private SVM svm;
+	private int vectorCount;
 
     public ESZ(SVM svm) {
         this.svm = svm;
+		this.vectorCount = svm.vectors.size();
     }
     
     public void run() {
-		List<SupportVector> resultVectors = this.clone(svm.vectors, v -> Math.random());
+		AlphaSet currentSet = new AlphaSet();
+		currentSet.alphas = new double[vectorCount];
+		AlphaSet evolvedSet = new AlphaSet();
+		evolvedSet.alphas = new double[vectorCount];
 
-		double score = this.calculateObjective(resultVectors);
-		AlphaGenerator evolver = new Evolver();
+		this.fillSet(currentSet, i -> Math.random());
 
-		for(int i=0; i<iMax; i++){
-			List<SupportVector> evolvedVectors = this.clone(resultVectors, evolver);
-			double newScore = this.calculateObjective(evolvedVectors);
-			if(newScore > score) resultVectors = evolvedVectors;
+		for(int s=0; s<ITERATIONS; s++) {
+			final double[] as = currentSet.alphas;
+			this.fillSet(evolvedSet, i -> this.offsetRandomly(as[i]));
+			if(evolvedSet.score > currentSet.score) currentSet = evolvedSet;
 		}
 
-		svm.vectors = resultVectors;
-		svm.b = this.calculateB(resultVectors);
+		this.apply(currentSet);
     }
 
-	private List<SupportVector> clone(List<SupportVector> vectors, AlphaGenerator generator) {
+	private void fillSet(AlphaSet set, AlphaGenerator generator) {
+
+		// try out alpha combination until one is valid
 		while(true) {
-			List<SupportVector> clonedVectors = new ArrayList<>();
 			int constrainedIndex = 0; // TODO: chose randomly
 			double sum = 0;
-			for (int i = 0; i < vectors.size(); i++) {
-				SupportVector v = vectors.get(i);
+			for (int i = 0; i < vectorCount; i++) {
+				SupportVector v = svm.vectors.get(i);
 				double newAlpha = 0;
 				if (i != constrainedIndex) {
-					newAlpha = generator.generateFor(v);
+					newAlpha = generator.generate(i);
 					sum += newAlpha * v.sign();
 				}
-				clonedVectors.add(v.clone(newAlpha));
+				set.alphas[i] = newAlpha;
 			}
-			SupportVector constrainedVector = clonedVectors.get(constrainedIndex);
-			constrainedVector.alpha = -sum * constrainedVector.sign();
-			if(constrainedVector.alpha > 0) {
-				return clonedVectors;
+			set.alphas[constrainedIndex] = -sum * svm.vectors.get(constrainedIndex).sign();
+			if(set.alphas[constrainedIndex] > 0) {
+				break;
 			}
 		}
-	}
 
-	private double calculateObjective(List<SupportVector> vectors){
+		// calculate objective function
 		double s1 = 0;
 		double s2 = 0;
 
-		for(SupportVector i : vectors) {
-			if(i.alpha < EPSILON) {
+		for(int i = 0; i < vectorCount; i++) {
+			double ai = set.alphas[i];
+			if(ai < EPSILON) {
 				continue;
 			}
-			s1 += i.alpha;
-			for(SupportVector j : vectors) {
-				if(j.alpha > EPSILON){
-					s2 += (i.alpha * j.alpha * i.sign() * j.sign() * svm.kernelFunc(i.x, j.x));
+			s1 += ai;
+			SupportVector vi = svm.vectors.get(i);
+			for(int j = 0; j < vectorCount; j++) {
+				double aj = set.alphas[j];
+				if(aj < EPSILON) {
+					continue;
 				}
+				SupportVector vj = svm.vectors.get(j);
+				s2 += (ai * aj * vi.sign() * vj.sign() * this.kernelFunc(vi.x, vj.x));
 			}
 		}
 
-		return s1 - (0.5 * s2);
+		set.score = s1 - (0.5 * s2);
 	}
 
-	private double calculateB(List<SupportVector> vectors){
-		int    anz = 0;
+	private double offsetRandomly(double alpha) {
+		double offset = Math.random() * DELTA;
+		if (Math.random()<0.5) offset *= -1;
+		return alpha - offset;
+	}
+
+	private void apply(AlphaSet set) {
 		double sum = 0;
-		for (SupportVector i : vectors) {
-			if (i.alpha > EPSILON && i.alpha < C) {
-				double erg = 0;
-				for (SupportVector j : vectors) {
-					if (j.alpha > EPSILON && j.alpha < C) {
-						erg += j.alpha * j.sign() * svm.kernelFunc(i.x, j.x);
-					}
-				}
-				double bw = i.sign() - erg;
-				anz++;
-				sum += bw;
+		int effectiveCount = 0;
+		for (int i = 0; i < vectorCount; i++) {
+			double ai = set.alphas[i];
+			svm.vectors.get(i).alpha = ai;
+			if (ai < EPSILON) {
+				continue;
 			}
+
+			SupportVector vi = svm.vectors.get(i);
+			double subsum = 0;
+			for(int j = 0; j < vectorCount; j++) {
+				double aj = set.alphas[j];
+				if(aj < EPSILON) {
+					continue;
+				}
+				SupportVector vj = svm.vectors.get(j);
+				subsum += aj * vj.sign() * this.kernelFunc(vi.x, vj.x);
+			}
+			sum += vi.sign() - subsum;
+
+			effectiveCount++;
 		}
-		return sum / anz;
+		svm.b = sum / effectiveCount;
+	}
+
+	public double kernelFunc(double[] x1, double[] x2) {
+		if(svm.dataIsLinearilySeparatable) {
+			return svm.dotKernel(x1, x2);
+		}
+		else{
+			return svm.polyKernel(x1, x2);
+		}
 	}
 }
