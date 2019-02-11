@@ -17,6 +17,7 @@ public class ESZ {
 	}
 
 	private SVM svm;
+	AlphaSet resultSet;
 	private int vectorCount;
 
     public ESZ(SVM svm) {
@@ -26,27 +27,25 @@ public class ESZ {
     }
     
     public void run() {
-		AlphaSet currentSet = new AlphaSet();
-		currentSet.alphas = new double[vectorCount];
-		AlphaSet evolvedSet = new AlphaSet();
-		evolvedSet.alphas = new double[vectorCount];
-
-		this.fillSet(currentSet, i -> Math.random());
+		resultSet = new AlphaSet();
+		this.fillSet(resultSet, i -> Math.random());
 
 		for(int s=0; s<ITERATIONS; s++) {
-			final double[] as = currentSet.alphas;
-			this.fillSet(evolvedSet, i -> this.offsetRandomly(as[i]));
-			if(evolvedSet.score > currentSet.score) currentSet = evolvedSet;
+			AlphaSet evolvedSet = new AlphaSet();
+			this.fillSet(evolvedSet, i -> this.offsetRandomly(i));
+			if(evolvedSet.score > resultSet.score)
+				resultSet = evolvedSet;
 		}
 
-		this.apply(currentSet);
+		this.apply(resultSet);
     }
 
 	private void fillSet(AlphaSet set, AlphaGenerator generator) {
 
-		// try out alpha combination until one is valid
+		set.alphas = new double[vectorCount];
+		// try out alpha combinations until one is valid
 		while(true) {
-			int constrainedIndex = 0; // TODO: chose randomly
+			int constrainedIndex = 0;
 			double sum = 0;
 			for (int i = 0; i < vectorCount; i++) {
 				SupportVector v = svm.vectors.get(i);
@@ -87,10 +86,15 @@ public class ESZ {
 		set.score = s1 - (0.5 * s2);
 	}
 
-	private double offsetRandomly(double alpha) {
+	private double offsetRandomly(int index) {
 		double offset = Math.random() * DELTA;
 		if (Math.random()<0.5) offset *= -1;
-		return alpha - offset;
+		double newAlpha = resultSet.alphas[index] - offset;
+		if (newAlpha < EPSILON) {
+			return 0;
+		} else {
+			return newAlpha;
+		}
 	}
 
 	private void apply(AlphaSet set) {

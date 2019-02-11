@@ -16,7 +16,7 @@ public class SVM {
 
     public double output(double[] x) {
         // $u = \sum_j \alpha_j y_j K(x_j, x) - b$
-        double u = -b;
+        double u = b;
         for(SupportVector v : vectors) {
             if(v.alpha <= epsilon)
                 continue; // ignore non-support vectors
