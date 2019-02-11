@@ -3,8 +3,7 @@ package sample;
 public class ESZ {
 
 	private static final int ITERATIONS = 10000000;
-	private static final double EPSILON = 1e-5;//1e-7;
-	private static final double C = 1000; // large c -> narrow margin
+	private static final double EPSILON = 1e-5; // 1e-7;
 	private static final double DELTA = 0.00001;
 
 	class AlphaSet {
@@ -99,7 +98,7 @@ public class ESZ {
 		for (int i = 0; i < vectorCount; i++) {
 			double ai = set.alphas[i];
 			svm.vectors.get(i).alpha = ai;
-			if (ai < EPSILON || ai > C) {
+			if (ai < EPSILON) {
 				continue;
 			}
 
@@ -107,7 +106,7 @@ public class ESZ {
 			double subsum = 0;
 			for(int j = 0; j < vectorCount; j++) {
 				double aj = set.alphas[j];
-				if(aj < EPSILON || ai > C) {
+				if(aj < EPSILON) {
 					continue;
 				}
 				SupportVector vj = svm.vectors.get(j);
