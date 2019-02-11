@@ -11,6 +11,7 @@ class SMO {
     private Map<SupportVector,Double> errorCache = new HashMap<>();
 
     public SMO(SVM svm) {
+        svm.epsilon = EPSILON;
         this.svm = svm;
     }
 
@@ -62,18 +63,7 @@ class SMO {
     private double error(SupportVector v) {
         if(errorCache.containsKey(v))
             return errorCache.get(v);
-        return this.output(v.x) - v.y;
-    }
-
-    private double output(double[] x) {
-        // $u = \sum_j \alpha_j y_j K(x_j, x) - b$
-        double u = -svm.b;
-        for(SupportVector v : svm.vectors) {
-            if(v.alpha <= EPSILON)
-                continue; // ignore non-support vectors
-            u += v.alpha * v.y * svm.dotKernel(v.x, x);
-        }
-        return u;
+        return svm.output(v.x) - v.y;
     }
 
     private boolean satisfiesKKTConditions(SupportVector v) {

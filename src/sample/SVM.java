@@ -1,14 +1,38 @@
 package sample;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class SVM {
 
-    public boolean dataIsLinearilySeparatable = false;
     List<SupportVector> vectors;
+    public boolean usePolyKernel;
     double b = 0; // treshold
     double c = 1.0; // soft-margin parameter
+    double epsilon = 0;
+
+    SVM(boolean usePolyKernel) {
+        this.usePolyKernel = usePolyKernel;
+    }
+
+    public double output(double[] x) {
+        // $u = \sum_j \alpha_j y_j K(x_j, x) - b$
+        double u = -b;
+        for(SupportVector v : vectors) {
+            if(v.alpha <= epsilon)
+                continue; // ignore non-support vectors
+            u += v.alpha * v.y * this.kernelFunc(v.x, x);
+        }
+        return u;
+    }
+
+    public double kernelFunc(double[] x1, double[] x2) {
+        if(usePolyKernel) {
+            return this.polyKernel(x1, x2);
+        }
+        else{
+            return this.dotKernel(x1, x2);
+        }
+    }
 
     public double dotKernel(double[] x1, double[] x2) {
         double prod = 0;

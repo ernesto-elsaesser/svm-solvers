@@ -17,6 +17,7 @@ public class Main {
     private static int DATA_SET = 3;
     private static boolean USE_CACHED_PLANE = false;
     private static boolean USE_SMO = true;
+    private static boolean USE_POLY_KERNEL = false;
 
     static class Hyperplane {
         double b = 0, w0 = 0, w1 = 0;
@@ -34,34 +35,33 @@ public class Main {
         f.setLayout(null);
         f.setVisible(true);
 
-        SVM svm = new SVM();
-        List<SupportVector> testData = null;
+        String trainingFile = "";
+        List<SupportVector> testVectors = null;
         switch (DATA_SET) {
             case 0:
-                svm.vectors = parse("fourclass");
-                testData = parse("fourclass-t");
+                trainingFile = "fourclass";
+                testVectors = parse("fourclass-t");
                 break;
             case 1:
-                svm.vectors = parse("svmguide1");
-                testData = parse("svmguide1-t");
+                trainingFile = "svmguide1";
+                testVectors = parse("svmguide1-t");
                 break;
             case 2:
-                svm.vectors = parse("separatable");
-                svm.dataIsLinearilySeparatable = true;
+                trainingFile = "separatable";
                 break;
             case 3:
-                svm.vectors = parse("circular");
+                trainingFile = "circular";
                 break;
             case 4:
-                svm.vectors = parse("threepoint1");
-                svm.dataIsLinearilySeparatable = true;
+                trainingFile = "threepoint1";
                 break;
             case 5:
-                svm.vectors = parse("threepoint2");
-                svm.dataIsLinearilySeparatable = true;
+                trainingFile = "threepoint2";
                 break;
         }
-        List<SupportVector> originalVectors = svm.vectors;
+        List<SupportVector> trainingVectors = parse(trainingFile);
+        SVM svm = new SVM(USE_POLY_KERNEL);
+        svm.vectors = trainingVectors;
 
         Hyperplane h = new Hyperplane();
         if (USE_CACHED_PLANE) {
@@ -76,21 +76,21 @@ public class Main {
                 ESZ esz = new ESZ(svm);
                 esz.run();
             }
-            h = deriveHyperplane(originalVectors);
+            h = deriveHyperplane(trainingVectors);
         }
 
         JFreeChart chart;
-        if (svm.dataIsLinearilySeparatable)
-            chart = createChart(originalVectors, h);
+        if (USE_POLY_KERNEL)
+            chart = createChart(trainingVectors, h);
         else
-            chart = testcreateChart(originalVectors, svm);
+            chart = testcreateChart(trainingVectors, svm);
         ChartPanel panel = new ChartPanel(chart);
         panel.setPreferredSize(f.getSize());
         f.setContentPane(panel);
         SwingUtilities.updateComponentTreeUI(f);
 
-        if (testData != null) {
-            classifyNewData(testData, h);
+        if (testVectors != null) {
+            classifyNewData(testVectors, h);
         }
     }
 

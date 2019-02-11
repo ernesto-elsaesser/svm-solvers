@@ -2,8 +2,8 @@ package sample;
 
 public class ESZ {
 
-	private static final int ITERATIONS = 10000000;
 	private static final double EPSILON = 1e-5; // 1e-7;
+	private static final int ITERATIONS = 10000000;
 	private static final double DELTA = 0.00001;
 
 	class AlphaSet {
@@ -20,6 +20,7 @@ public class ESZ {
 	private int vectorCount;
 
     public ESZ(SVM svm) {
+		svm.epsilon = EPSILON;
         this.svm = svm;
 		this.vectorCount = svm.vectors.size();
     }
@@ -79,7 +80,7 @@ public class ESZ {
 					continue;
 				}
 				SupportVector vj = svm.vectors.get(j);
-				s2 += (ai * aj * vi.sign() * vj.sign() * this.kernelFunc(vi.x, vj.x));
+				s2 += (ai * aj * vi.sign() * vj.sign() * svm.kernelFunc(vi.x, vj.x));
 			}
 		}
 
@@ -110,21 +111,12 @@ public class ESZ {
 					continue;
 				}
 				SupportVector vj = svm.vectors.get(j);
-				subsum += aj * vj.sign() * this.kernelFunc(vi.x, vj.x);
+				subsum += aj * vj.sign() * svm.kernelFunc(vi.x, vj.x);
 			}
 			sum += vi.sign() - subsum;
 
 			effectiveCount++;
 		}
 		svm.b = sum / effectiveCount;
-	}
-
-	public double kernelFunc(double[] x1, double[] x2) {
-		if(svm.dataIsLinearilySeparatable) {
-			return svm.dotKernel(x1, x2);
-		}
-		else{
-			return svm.polyKernel(x1, x2);
-		}
 	}
 }
