@@ -2,13 +2,9 @@ package sample;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.io.FileReader;
-import java.util.*;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.border.*;
-
-import com.opencsv.CSVReader;
 
 import org.jfree.chart.*;
 import org.jfree.chart.plot.*;
@@ -50,9 +46,11 @@ public class Main implements ActionListener {
         JPanel splitPanel = new JPanel(new BorderLayout());
 
         configPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        configPanel.setPreferredSize(new Dimension(200,600));
+        configPanel.setPreferredSize(new Dimension(220,600));
         configPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
+        JLabel dataLabel = new JLabel("Sample:");
+        configPanel.add(dataLabel);
         dataSetSelector = new JComboBox(dataSets);
         dataSetSelector.addActionListener(this);
         configPanel.add(dataSetSelector);
@@ -65,7 +63,7 @@ public class Main implements ActionListener {
 
         this.addSolverHeader("SMO");
         smoCModel = new SpinnerNumberModel(1, 1, 1000, 1);
-        this.addSpinner("C", smoCModel);
+        this.addSpinner("Alpha Limit (C)", smoCModel);
         smoRunButton = new JButton("Run SMO");
         this.addSolverButton(smoRunButton);
 
@@ -90,8 +88,8 @@ public class Main implements ActionListener {
 
     private void addSolverHeader(String title) {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setPreferredSize(new Dimension(180,40));
-        panel.setBorder(new EmptyBorder(10, 0, 10, 0));
+        panel.setPreferredSize(new Dimension(180,60));
+        panel.setBorder(new EmptyBorder(25, 0, 10, 0));
         panel.add(new JLabel(title), BorderLayout.NORTH);
         panel.add(new JSeparator(SwingConstants.HORIZONTAL), BorderLayout.SOUTH);
         configPanel.add(panel);
@@ -127,7 +125,7 @@ public class Main implements ActionListener {
 
     private void updateChart(Solver solver) {
         String dataSet = (String) dataSetSelector.getSelectedItem();
-        List<FeatureVector> trainingVectors = parse(dataSet);
+        List<FeatureVector> trainingVectors = CSVImporter.read(dataSet);
         SVM svm = this.calculateSVM(trainingVectors, solver);
 
         JFreeChart chart = createChart(trainingVectors, svm);
@@ -157,32 +155,6 @@ public class Main implements ActionListener {
         return svm;
     }
 
-    private List<FeatureVector> parse(String filename) {
-        List<String[]> lines;
-        try {
-            CSVReader reader = new CSVReader(new FileReader("data/" + filename + ".csv"), ' ');
-            lines = reader.readAll();
-        } catch (Exception e) {
-            lines = new ArrayList<>();
-        }
-        int num = lines.size();
-        List<FeatureVector> vectors = new ArrayList<>();
-        for (int i = 0; i < num; i++) {
-            String[] line = lines.get(i);
-            double x1 = parseValue(line[1]);
-            double x2 = parseValue(line[2]);
-            int y = Integer.parseInt(line[0]);
-            FeatureVector v = new FeatureVector(x1, x2, y);
-            vectors.add(v);
-        }
-        return vectors;
-    }
-
-    private double parseValue(String s) {
-        String[] parts = s.split(":");
-        return Double.valueOf(parts[1]);
-    }
-
     private JFreeChart createChart(List<FeatureVector> vectors, SVM svm) {
 
         XYSeriesCollection dataset = new XYSeriesCollection();
@@ -196,7 +168,7 @@ public class Main implements ActionListener {
             dataset.addSeries(hyperplane);
         }
 
-        JFreeChart chart = ChartFactory.createXYLineChart("SVMChart", "",
+        JFreeChart chart = ChartFactory.createXYLineChart("Chart", "",
                 "", dataset, PlotOrientation.VERTICAL, false, false, false);
 
         XYPlot plot = (XYPlot) chart.getPlot();
