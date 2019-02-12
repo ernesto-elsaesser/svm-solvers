@@ -59,6 +59,9 @@ public class Main implements ActionListener {
 
         configPanel.add(this.solverHeader("SMO"));
 
+        JLabel smoEpsilonLabel = new JLabel("Epsilon Exp.");
+        configPanel.add(smoEpsilonLabel);
+
         smoEpsilonModel = new SpinnerNumberModel(-5, -10, -1, 1);
         JSpinner smoEpsilonSpinner = new JSpinner(smoEpsilonModel);
         configPanel.add(smoEpsilonSpinner);
@@ -68,6 +71,9 @@ public class Main implements ActionListener {
         configPanel.add(smoRunButton);
 
         configPanel.add(this.solverHeader("Evolution"));
+
+        JLabel eszEpsilonLabel = new JLabel("Epsilon Exp.");
+        configPanel.add(eszEpsilonLabel);
 
         eszEpsilonModel = new SpinnerNumberModel(-5, -10, -1, 1);
         JSpinner eszEpsilonSpinner = new JSpinner(eszEpsilonModel);
