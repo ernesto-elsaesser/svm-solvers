@@ -16,7 +16,7 @@ public class Main {
 
     private static int DATA_SET = 2;
     private static boolean USE_SMO = false;
-    private static boolean USE_POLY_KERNEL = false;
+    private static boolean USE_POLY_KERNEL = true;
 
     public static void main(String[] args) {
 
@@ -175,8 +175,11 @@ public class Main {
             }
         }
 
-        for(double x = xMin-3; x < xMax+3; x+=0.5) {
-            for(double y = yMin-3; y < yMax+3; y+=0.5) {
+        double stepX = (xMax - xMin) / 100.0;
+        double stepY = (yMax - yMin) / 100.0;
+
+        for(double x = xMin-3; x < xMax+3; x+=stepX) {
+            for(double y = yMin-3; y < yMax+3; y+=stepY) {
                 double classification = svm.output(new double[] {x, y});
 
                 if (classification <= 0)
