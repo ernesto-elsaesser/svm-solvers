@@ -25,11 +25,13 @@ public class Main implements ActionListener {
     private JPanel mainPanel;
     private JComboBox dataSetSelector;
     private JCheckBox kernelToggle;
+    private SpinnerModel epsilonModel;
 
-    private SpinnerModel smoEpsilonModel;
+    private SpinnerModel smoCModel;
     private JButton smoRunButton;
 
-    private SpinnerModel eszEpsilonModel;
+    private SpinnerModel eszIterationsModel;
+    private SpinnerModel eszDeltaModel;
     private JButton eszRunButton;
 
     private String[] dataSets = {"trivial1","trivial2","separatable","circular","real1","real2"};
@@ -57,31 +59,22 @@ public class Main implements ActionListener {
         kernelToggle = new JCheckBox("Use polynomial kernel");
         configPanel.add(kernelToggle);
 
-        configPanel.add(this.solverHeader("SMO"));
+        epsilonModel = new SpinnerNumberModel(-5, -10, -1, 1);
+        this.addSpinner("Epsilon Exp.", epsilonModel);
 
-        JLabel smoEpsilonLabel = new JLabel("Epsilon Exp.");
-        configPanel.add(smoEpsilonLabel);
-
-        smoEpsilonModel = new SpinnerNumberModel(-5, -10, -1, 1);
-        JSpinner smoEpsilonSpinner = new JSpinner(smoEpsilonModel);
-        configPanel.add(smoEpsilonSpinner);
-
+        this.addSolverHeader("SMO");
+        smoCModel = new SpinnerNumberModel(1, 1, 1000, 1);
+        this.addSpinner("C", smoCModel);
         smoRunButton = new JButton("Run SMO");
-        smoRunButton.addActionListener(this);
-        configPanel.add(smoRunButton);
+        this.addSolverButton(smoRunButton);
 
-        configPanel.add(this.solverHeader("Evolution"));
-
-        JLabel eszEpsilonLabel = new JLabel("Epsilon Exp.");
-        configPanel.add(eszEpsilonLabel);
-
-        eszEpsilonModel = new SpinnerNumberModel(-5, -10, -1, 1);
-        JSpinner eszEpsilonSpinner = new JSpinner(eszEpsilonModel);
-        configPanel.add(eszEpsilonSpinner);
-
+        this.addSolverHeader("Evolution");
+        eszIterationsModel = new SpinnerNumberModel(10, 1, 100, 1);
+        this.addSpinner("Iterations (Mio.)", eszIterationsModel);
+        eszDeltaModel = new SpinnerNumberModel(-5, -10, -1, 1);
+        this.addSpinner("Delta Exp.", eszDeltaModel);
         eszRunButton = new JButton("Run ESZ");
-        eszRunButton.addActionListener(this);
-        configPanel.add(eszRunButton);
+        this.addSolverButton(eszRunButton);
 
         mainPanel = new JPanel();
         mainPanel.setPreferredSize(new Dimension(700,600));
@@ -93,13 +86,25 @@ public class Main implements ActionListener {
         frame.setVisible(true);
     }
 
-    private JPanel solverHeader(String title) {
+    private void addSolverHeader(String title) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setPreferredSize(new Dimension(180,40));
         panel.setBorder(new EmptyBorder(10, 0, 10, 0));
         panel.add(new JLabel(title), BorderLayout.NORTH);
         panel.add(new JSeparator(SwingConstants.HORIZONTAL), BorderLayout.SOUTH);
-        return panel;
+        configPanel.add(panel);
+    }
+
+    private void addSpinner(String labelText, SpinnerModel model) {
+        JLabel label = new JLabel(labelText);
+        configPanel.add(label);
+        JSpinner spinner = new JSpinner(model);
+        configPanel.add(spinner);
+    }
+
+    private void addSolverButton(JButton button) {
+        button.addActionListener(this);
+        configPanel.add(button);
     }
 
     @Override
@@ -116,18 +121,19 @@ public class Main implements ActionListener {
             svm.kernel = new DotProductKernel();
         }
 
-        SpinnerModel model;
         Solver solver;
-
         if (e.getSource() == smoRunButton) {
-            model = smoEpsilonModel;
-            solver = new SMO();
+            double c = (int) smoCModel.getValue();
+            solver = new SMO(c);
         } else {
-            model = eszEpsilonModel;
-            solver = new ESZ();
+            int iterations = 1000000 * (int) eszIterationsModel.getValue();
+            int deltaExponent = (int) eszDeltaModel.getValue();
+            double delta = Math.pow(10, deltaExponent);
+            solver = new ESZ(iterations, delta);
         }
 
-        svm.epsilon = Math.pow(10, (int) model.getValue());
+        int epsilonExponent = (int) epsilonModel.getValue();
+        svm.epsilon = Math.pow(10, epsilonExponent);
         solver.solve(svm);
         svm.updateB();
 

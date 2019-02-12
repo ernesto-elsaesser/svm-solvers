@@ -3,10 +3,7 @@ package sample.solvers;
 import sample.FeatureVector;
 import sample.SVM;
 
-public class ESZ implements Solver {
-
-	private static final int ITERATIONS = 10000000;
-	private static final double DELTA = 0.00001;
+public class ESZ implements Solver { ;
 
 	class AlphaSet {
 		double[] alphas;
@@ -18,14 +15,22 @@ public class ESZ implements Solver {
 		double generate(int index);
 	}
 
+	private int iterations;
+	private double delta;
+
 	private SVM svm;
 	AlphaSet resultSet;
+
+	public ESZ(int iterations, double delta) {
+		this.iterations = iterations;
+		this.delta = delta;
+	}
     
     public void solve(SVM svm) {
     	this.svm = svm;
 		this.resultSet = this.generateSet(i -> Math.random());
 
-		for(int s=0; s<ITERATIONS; s++) {
+		for(int s=0; s<iterations; s++) {
 			AlphaSet evolvedSet = this.generateSet(i -> this.offsetRandomly(resultSet.alphas[i]));
 			if(evolvedSet.score > resultSet.score)
 				resultSet = evolvedSet;
@@ -86,7 +91,7 @@ public class ESZ implements Solver {
 	}
 
 	private double offsetRandomly(double alpha) {
-		double offset = Math.random() * DELTA;
+		double offset = Math.random() * delta;
 		if (Math.random()<0.5) offset *= -1;
 		double newAlpha = alpha - offset;
 		if (newAlpha < svm.epsilon) {

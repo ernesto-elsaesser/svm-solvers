@@ -7,11 +7,15 @@ import java.util.*;
 
 public class SMO implements Solver {
 
-    private static final double C = 1;
-
     private static final Random random = new Random();
+
+    private double c;
     private SVM svm;
     private Map<FeatureVector,Double> errorCache = new HashMap<>();
+
+    public SMO(double c) {
+        this.c = c;
+    }
 
     public void solve(SVM svm) {
         this.svm = svm;
@@ -70,7 +74,7 @@ public class SMO implements Solver {
         final double r = error(v) * v.y; // (u-y)*y = y*u-1
         // (r >= 0 or alpha >= C) and (r <= 0 or alpha <= 0)
         return (this.geq(r, 0, svm.epsilon) ||
-                this.geq(v.alpha, C, svm.epsilon)) &&
+                this.geq(v.alpha, c, svm.epsilon)) &&
                 (this.leq(r, 0, svm.epsilon) ||
                         this.leq(v.alpha, 0, svm.epsilon));
     }
@@ -103,11 +107,11 @@ public class SMO implements Solver {
         if(y1 != y2) {
             // equation (12.3)
             l = Math.max(0, alpha2 - alpha1);
-            h = Math.min(C, C + alpha2 - alpha1);
+            h = Math.min(c, c + alpha2 - alpha1);
         } else /* v1.y == v2.y */ {
             // equation (12.4)
-            l = Math.max(0, alpha2 + alpha1 - C);
-            h = Math.min(C, alpha2 + alpha1);
+            l = Math.max(0, alpha2 + alpha1 - c);
+            h = Math.min(c, alpha2 + alpha1);
         }
         if(l == h) // the alpha values are constrained to a single point
             return false;
@@ -140,9 +144,9 @@ public class SMO implements Solver {
 
         v1.alpha = alpha1 + s*(alpha2-v2.alpha); // equation (12.8)
         v1.bound = this.leq(v1.alpha, 0, svm.epsilon) ||
-                this.geq(v1.alpha, C, svm.epsilon);
+                this.geq(v1.alpha, c, svm.epsilon);
         v2.bound = this.leq(v2.alpha, 0, svm.epsilon) ||
-                this.geq(v2.alpha, C, svm.epsilon);
+                this.geq(v2.alpha, c, svm.epsilon);
 
         // update threshold
         final double b = svm.b;
