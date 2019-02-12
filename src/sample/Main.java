@@ -54,6 +54,7 @@ public class Main implements ActionListener {
         configPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
         dataSetSelector = new JComboBox(dataSets);
+        dataSetSelector.addActionListener(this);
         configPanel.add(dataSetSelector);
 
         kernelToggle = new JCheckBox("Use polynomial kernel");
@@ -113,6 +114,11 @@ public class Main implements ActionListener {
         String dataSet = (String) dataSetSelector.getSelectedItem();
         List<FeatureVector> trainingVectors = parse(dataSet);
 
+        if (e.getSource() == dataSetSelector) {
+            drawExample(trainingVectors, null);
+            return;
+        }
+
         SVM svm = new SVM();
         svm.vectors = trainingVectors;
         if (kernelToggle.isSelected()) {
@@ -137,6 +143,10 @@ public class Main implements ActionListener {
         solver.solve(svm);
         svm.updateB();
 
+        drawExample(trainingVectors, svm);
+    }
+
+    private void drawExample(List<FeatureVector> trainingVectors, SVM svm) {
         JFreeChart chart = createChart(trainingVectors, svm);
         ChartPanel chartPanel = new ChartPanel(chart);
         chartPanel.setPreferredSize(mainPanel.getSize());
@@ -173,7 +183,10 @@ public class Main implements ActionListener {
 
     private JFreeChart createChart(List<FeatureVector> vectors, SVM svm) {
 
-        XYSeries hyperplane   = areaSeries(svm, "Hyperplane");
+        XYSeries hyperplane = null;
+        if (svm != null)
+            hyperplane = areaSeries(svm, "Hyperplane");
+
         XYSeries class1points = pointSeries(vectors, (byte)0, "Class1Points");
         XYSeries class2points = pointSeries(vectors, (byte)1,"Class2Points");
 
@@ -183,7 +196,9 @@ public class Main implements ActionListener {
         dataset.addSeries(class1points);
 
         dataset.addSeries(class2points);
-        dataset.addSeries(hyperplane);
+
+        if (hyperplane != null)
+            dataset.addSeries(hyperplane);
 
         JFreeChart chart = ChartFactory.createXYLineChart("SVMChart", "",
                 "", dataset, PlotOrientation.VERTICAL, false, false, false);
