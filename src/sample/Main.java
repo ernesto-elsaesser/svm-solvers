@@ -14,14 +14,9 @@ import org.jfree.data.xy.*;
 
 public class Main {
 
-    private static int DATA_SET = 3;
-    private static boolean USE_CACHED_PLANE = false;
+    private static int DATA_SET = 2;
     private static boolean USE_SMO = false;
-    private static boolean USE_POLY_KERNEL = true;
-
-    static class Hyperplane {
-        double b = 0, w0 = 0, w1 = 0;
-    }
+    private static boolean USE_POLY_KERNEL = false;
 
     public static void main(String[] args) {
 
@@ -63,63 +58,35 @@ public class Main {
         SVM svm = new SVM(USE_POLY_KERNEL);
         svm.vectors = trainingVectors;
 
-        Hyperplane h = new Hyperplane();
-        if (USE_CACHED_PLANE) {
-            h.b = -4.2;
-            h.w0 = 0.6;
-            h.w1 = 0.4;
+        if (USE_SMO) {
+            SMO smo = new SMO(svm);
+            smo.train();
         } else {
-            if (USE_SMO) {
-                SMO smo = new SMO(svm);
-                smo.train();
-            } else {
-                ESZ esz = new ESZ(svm);
-                esz.run();
-            }
-            h = deriveHyperplane(trainingVectors);
+            ESZ esz = new ESZ(svm);
+            esz.run();
         }
 
         JFreeChart chart;
-        if (!USE_POLY_KERNEL)
-            chart = createChart(trainingVectors, h);
-        else
-            chart = testcreateChart(trainingVectors, svm);
+        chart = createChart(trainingVectors, svm);
         ChartPanel panel = new ChartPanel(chart);
         panel.setPreferredSize(f.getSize());
         f.setContentPane(panel);
         SwingUtilities.updateComponentTreeUI(f);
 
         if (testVectors != null) {
-            classifyNewData(testVectors, h);
+            classifyNewData(testVectors, svm);
         }
     }
 
-    private static void classifyNewData(List<SupportVector> testing, Hyperplane h) {
+    private static void classifyNewData(List<SupportVector> testing, SVM svm) {
         int rightClassification = 0;
 
-        for (SupportVector testVector:
-                testing) {
-            double res = testVector.x[0] * h.w0 + testVector.x[1] * h.w1 + h.b;
-            if (res <= 0 && ((int)testVector.y) == 0)
+        for (SupportVector testVector: testing) {
+            if (svm.output(testVector.x) <= 0 && ((int)testVector.y) == 0)
                 rightClassification++;
         }
 
         System.out.println("Zuverlässigkeit " + (((double)rightClassification / testing.size()) * 100) + "%");
-    }
-
-    private static Hyperplane deriveHyperplane(List<SupportVector> vectors) {
-        Hyperplane h = new Hyperplane();
-        for (SupportVector v : vectors) {
-            h.w0 += v.alpha * v.sign() * v.x[0];
-            h.w1 += v.alpha * v.sign() * v.x[1];
-        }
-        for (SupportVector v : vectors) {
-            if (v.alpha > 0.0) {
-                h.b = v.sign() - (v.x[0] * h.w0 + v.x[1] * h.w1);
-                return h;
-            }
-        }
-        throw new IllegalArgumentException("all alphas are zero");
     }
 
     private static List<SupportVector> parse(String filename) {
@@ -148,9 +115,9 @@ public class Main {
         return Double.valueOf(parts[1]);
     }
 
-    private static JFreeChart testcreateChart(List<SupportVector> vectors, SVM svm) {
+    private static JFreeChart createChart(List<SupportVector> vectors, SVM svm) {
 
-        XYSeries hyperplane   = areaSeries2(svm, "Hyperplane");
+        XYSeries hyperplane   = areaSeries(svm, "Hyperplane");
         XYSeries class1points = pointSeries(vectors, (byte)0, "Class1Points");
         XYSeries class2points = pointSeries(vectors, (byte)1,"Class2Points");
 
@@ -187,30 +154,6 @@ public class Main {
 
     private static XYSeries areaSeries(SVM svm, String key) {
         XYSeries series = new XYSeries(key);
-        for (int i=-100;i<100;i++) {
-            for (int j=-100;j<100;j++) {
-                int wert1 = i;
-                int wert2 = j;
-                double[] werte = {wert1, wert2};
-                double erg = svm.output(werte);
-                if(erg < 0){
-                    series.add(wert1, wert2);
-                }
-                double wert3 = i+0.5;
-                double wert4 = j+0.5;
-                double[] werte2 = {wert3, wert4};
-                erg = svm.output(werte2);
-                if(erg < 0){
-                    series.add(wert3, wert4);
-                }
-            }
-        }
-
-        return series;
-    }
-
-    private static XYSeries areaSeries2(SVM svm, String key) {
-        XYSeries series = new XYSeries(key);
 
         double xMin = 0.0;
         double xMax = 0.0;
@@ -242,78 +185,6 @@ public class Main {
         }
 
         return series;
-    }
-
-    private static JFreeChart createChart(List<SupportVector> vectors, Hyperplane h) {
-        XYSeries class1points = pointSeries(vectors, (byte)0, "Class1Points");
-        XYSeries class2points = pointSeries(vectors, (byte)1,"Class2Points");
-        XYSeries hyperplane = lineSeries(vectors, h,"Hyperplane");
-
-        XYSeriesCollection dataset = new XYSeriesCollection();
-        dataset.addSeries(hyperplane);
-        dataset.addSeries(class1points);
-        dataset.addSeries(class2points);
-
-        JFreeChart chart = ChartFactory.createXYLineChart("SVMChart", "",
-                "", dataset, PlotOrientation.VERTICAL, false, false, false);
-
-        XYPlot plot = (XYPlot) chart.getPlot();
-        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
-        renderer.setSeriesLinesVisible(0, true);
-        renderer.setSeriesShapesVisible(0, true);
-        renderer.setSeriesPaint(0, Color.black);
-        renderer.setSeriesLinesVisible(1, false);
-        renderer.setSeriesShapesVisible(1, true);
-        renderer.setSeriesPaint(1, Color.red);
-        Shape s = renderer.getSeriesShape(0);
-        renderer.setSeriesLinesVisible(2, false);
-        renderer.setSeriesShapesVisible(2, true);
-        renderer.setSeriesPaint(2, Color.blue);
-        plot.setRenderer(renderer);
-
-        return chart;
-    }
-
-    private static XYSeries lineSeries(List<SupportVector> vectors, Hyperplane h, String key) {
-        XYSeries series = new XYSeries(key);
-
-        double xMin = 0.0;
-        double xMax = 0.0;
-        double yMin = 0.0;
-        double yMax = 0.0;
-        for (SupportVector v : vectors) {
-            if (v.x[0] > xMax) {
-                xMax = v.x[0];
-            }
-            if (v.x[1] > yMax) {
-                yMax = v.x[1];
-            }
-            if (v.x[0] < xMin) {
-                xMin = v.x[0];
-            }
-            if (v.x[1] < yMin) {
-                yMin = v.x[1];
-            }
-        }
-        if (h.w1 == 0) {
-            series.add(-h.b, yMin);
-            series.add(-h.b, yMax);
-        } else {
-            int res = 50;
-            double xStep = (xMax - xMin) / (double)res;
-            for(int i = -3; i < res+3; i++) {
-                double x = xMin + i * xStep;
-                double y = lineFunc(h, x);
-                if (y >= 0.66 * yMin && y <= 1.5 * yMax) {
-                    series.add(x, y);
-                }
-            }
-        }
-        return series;
-    }
-
-    private static double lineFunc(Hyperplane h, double x) {
-        return -(x * h.w0 + h.b) / h.w1;
     }
 
     private static XYSeries pointSeries(List<SupportVector> vectors, byte y, String key) {
