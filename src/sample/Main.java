@@ -54,6 +54,7 @@ public class Main implements ActionListener {
         configPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
         dataSetSelector = new JComboBox(dataSets);
+        dataSetSelector.addActionListener(this);
         configPanel.add(dataSetSelector);
 
         kernelToggle = new JCheckBox("Use polynomial kernel");
@@ -78,6 +79,7 @@ public class Main implements ActionListener {
 
         mainPanel = new JPanel();
         mainPanel.setPreferredSize(new Dimension(700,600));
+        this.updateChart(null);
 
         splitPanel.add(configPanel, BorderLayout.WEST);
         splitPanel.add(mainPanel, BorderLayout.EAST);
@@ -109,9 +111,37 @@ public class Main implements ActionListener {
 
     @Override
     public void actionPerformed(ActionEvent e) {
+        Solver solver = null;
+        if (e.getSource() == smoRunButton) {
+            double c = (int) smoCModel.getValue();
+            solver = new SMO(c);
+        } else if (e.getSource() == eszRunButton) {
+            int iterations = 1000000 * (int) eszIterationsModel.getValue();
+            int deltaExponent = (int) eszDeltaModel.getValue();
+            double delta = Math.pow(10, deltaExponent);
+            solver = new ESZ(iterations, delta);
+        }
+        this.updateChart(solver);
+        SwingUtilities.updateComponentTreeUI(frame);
+    }
 
+    private void updateChart(Solver solver) {
         String dataSet = (String) dataSetSelector.getSelectedItem();
         List<FeatureVector> trainingVectors = parse(dataSet);
+        SVM svm = this.calculateSVM(trainingVectors, solver);
+
+        JFreeChart chart = createChart(trainingVectors, svm);
+        ChartPanel chartPanel = new ChartPanel(chart);
+        chartPanel.setPreferredSize(new Dimension(700,570));
+        mainPanel.removeAll();
+        mainPanel.add(chartPanel);
+    }
+
+    private SVM calculateSVM(List<FeatureVector> trainingVectors, Solver solver) {
+
+        if (solver == null) {
+            return null;
+        }
 
         SVM svm = new SVM();
         svm.vectors = trainingVectors;
@@ -120,29 +150,11 @@ public class Main implements ActionListener {
         } else {
             svm.kernel = new DotProductKernel();
         }
-
-        Solver solver;
-        if (e.getSource() == smoRunButton) {
-            double c = (int) smoCModel.getValue();
-            solver = new SMO(c);
-        } else {
-            int iterations = 1000000 * (int) eszIterationsModel.getValue();
-            int deltaExponent = (int) eszDeltaModel.getValue();
-            double delta = Math.pow(10, deltaExponent);
-            solver = new ESZ(iterations, delta);
-        }
-
         int epsilonExponent = (int) epsilonModel.getValue();
         svm.epsilon = Math.pow(10, epsilonExponent);
         solver.solve(svm);
         svm.updateB();
-
-        JFreeChart chart = createChart(trainingVectors, svm);
-        ChartPanel chartPanel = new ChartPanel(chart);
-        chartPanel.setPreferredSize(mainPanel.getSize());
-        mainPanel.removeAll();
-        mainPanel.add(chartPanel);
-        SwingUtilities.updateComponentTreeUI(frame);
+        return svm;
     }
 
     private List<FeatureVector> parse(String filename) {
@@ -173,16 +185,16 @@ public class Main implements ActionListener {
 
     private JFreeChart createChart(List<FeatureVector> vectors, SVM svm) {
 
-        XYSeries hyperplane   = areaSeries(svm, "Hyperplane");
-        XYSeries class1points = pointSeries(vectors, 1, "Class1Points");
-        XYSeries class2points = pointSeries(vectors, -1,"Class2Points");
-
-
         XYSeriesCollection dataset = new XYSeriesCollection();
 
+        XYSeries class1points = pointSeries(vectors, 1, "Class1Points");
         dataset.addSeries(class1points);
+        XYSeries class2points = pointSeries(vectors, -1,"Class2Points");
         dataset.addSeries(class2points);
-        dataset.addSeries(hyperplane);
+        if (svm != null) {
+            XYSeries hyperplane = areaSeries(svm, "Hyperplane");
+            dataset.addSeries(hyperplane);
+        }
 
         JFreeChart chart = ChartFactory.createXYLineChart("SVMChart", "",
                 "", dataset, PlotOrientation.VERTICAL, false, false, false);
@@ -190,13 +202,13 @@ public class Main implements ActionListener {
         XYPlot plot = (XYPlot) chart.getPlot();
         XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
 
-        renderer.setSeriesLinesVisible(1, false);
-        renderer.setSeriesShapesVisible(1, true);
-        renderer.setSeriesPaint(1, Color.red);
-
         renderer.setSeriesLinesVisible(0, false);
         renderer.setSeriesShapesVisible(0, true);
-        renderer.setSeriesPaint(0, Color.blue);
+        renderer.setSeriesPaint(0, Color.red);
+
+        renderer.setSeriesLinesVisible(1, false);
+        renderer.setSeriesShapesVisible(1, true);
+        renderer.setSeriesPaint(1, Color.blue);
 
         renderer.setSeriesLinesVisible(2, false);
         renderer.setSeriesShapesVisible(2, true);
