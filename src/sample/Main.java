@@ -14,8 +14,8 @@ import org.jfree.data.xy.*;
 
 public class Main {
 
-    private static int DATA_SET = 3;
-    private static boolean USE_SMO = true;
+    private static int DATA_SET = 2;
+    private static boolean USE_SMO = false;
     private static boolean USE_POLY_KERNEL = true;
 
     public static void main(String[] args) {
@@ -31,7 +31,7 @@ public class Main {
         f.setVisible(true);
 
         String trainingFile = "";
-        List<SupportVector> testVectors = null;
+        List<FeatureVector> testVectors = null;
         switch (DATA_SET) {
             case 0:
                 trainingFile = "fourclass";
@@ -54,7 +54,7 @@ public class Main {
                 trainingFile = "threepoint2";
                 break;
         }
-        List<SupportVector> trainingVectors = parse(trainingFile);
+        List<FeatureVector> trainingVectors = parse(trainingFile);
         SVM svm = new SVM(USE_POLY_KERNEL);
         svm.vectors = trainingVectors;
 
@@ -65,7 +65,9 @@ public class Main {
             ESZ esz = new ESZ(svm);
             esz.run();
         }
-        calculateB(svm);
+
+        List<FeatureVector> supportVectors = findSupportVectors(svm);
+        svm.b = calculateB(supportVectors, svm);
 
         JFreeChart chart;
         chart = createChart(trainingVectors, svm);
@@ -79,30 +81,45 @@ public class Main {
         }
     }
 
-    private static void calculateB(SVM svm) {
-        double sum = 0;
-        int effectiveCount = 0;
-        for (SupportVector i: svm.vectors) {
-            if (i.alpha < svm.epsilon) {
-                continue;
+    private static List<FeatureVector> findSupportVectors(SVM svm) {
+        List<FeatureVector> featureVectors = new ArrayList<>();
+        for (FeatureVector v: svm.vectors) {
+            if (v.alpha > svm.epsilon) {
+                featureVectors.add(v);
             }
-            double subsum = 0;
-            for(SupportVector j: svm.vectors) {
-                if(j.alpha < svm.epsilon) {
-                    continue;
-                }
-                subsum += j.alpha * j.sign() * svm.kernelFunc(i.x, j.x);
-            }
-            sum += i.sign() - subsum;
-            effectiveCount++;
         }
-        svm.b = sum / effectiveCount;
+        return featureVectors;
     }
 
-    private static void classifyNewData(List<SupportVector> testing, SVM svm) {
+    private static double calculateB(List<FeatureVector> featureVectors, SVM svm) {
+        double bsum = 0;
+        for (FeatureVector i: featureVectors) {
+            double subsum = 0;
+            for(FeatureVector j: featureVectors) {
+                subsum += j.alpha * j.sign() * svm.kernelFunc(i.x, j.x);
+            }
+            bsum += i.sign() - subsum;
+        }
+        return bsum / featureVectors.size();
+    }
+
+    private static double calculateBAlt(List<FeatureVector> featureVectors, SVM svm) {
+        double[] w = new double[2];
+        for (FeatureVector v : featureVectors) {
+            w[0] += v.alpha * v.sign() * v.x[0];
+            w[1] += v.alpha * v.sign() * v.x[1];
+        }
+        double bsum = 0;
+        for (FeatureVector v : featureVectors) {
+            bsum += v.sign() - svm.kernelFunc(v.x, w);
+        }
+        return bsum / featureVectors.size();
+    }
+
+    private static void classifyNewData(List<FeatureVector> testing, SVM svm) {
         int rightClassification = 0;
 
-        for (SupportVector testVector: testing) {
+        for (FeatureVector testVector: testing) {
             if (svm.output(testVector.x) <= 0 && ((int)testVector.y) == 0)
                 rightClassification++;
         }
@@ -110,7 +127,7 @@ public class Main {
         System.out.println("Zuverlässigkeit " + (((double)rightClassification / testing.size()) * 100) + "%");
     }
 
-    private static List<SupportVector> parse(String filename) {
+    private static List<FeatureVector> parse(String filename) {
         List<String[]> lines;
         try {
             CSVReader reader = new CSVReader(new FileReader("data/" + filename + ".csv"), ' ');
@@ -119,13 +136,13 @@ public class Main {
             lines = new ArrayList<>();
         }
         int num = lines.size();
-        List<SupportVector> vectors = new ArrayList<>();
+        List<FeatureVector> vectors = new ArrayList<>();
         for (int i = 0; i < num; i++) {
             String[] line = lines.get(i);
             double x1 = parseValue(line[1]);
             double x2 = parseValue(line[2]);
             int y = Integer.parseInt(line[0]);
-            SupportVector v = new SupportVector(x1, x2, y);
+            FeatureVector v = new FeatureVector(x1, x2, y);
             vectors.add(v);
         }
         return vectors;
@@ -136,7 +153,7 @@ public class Main {
         return Double.valueOf(parts[1]);
     }
 
-    private static JFreeChart createChart(List<SupportVector> vectors, SVM svm) {
+    private static JFreeChart createChart(List<FeatureVector> vectors, SVM svm) {
 
         XYSeries hyperplane   = areaSeries(svm, "Hyperplane");
         XYSeries class1points = pointSeries(vectors, (byte)0, "Class1Points");
@@ -181,7 +198,7 @@ public class Main {
         double yMin = 0.0;
         double yMax = 0.0;
 
-        for (SupportVector v : svm.vectors) {
+        for (FeatureVector v : svm.vectors) {
             if (v.x[0] > xMax) {
                 xMax = v.x[0];
             }
@@ -211,9 +228,9 @@ public class Main {
         return series;
     }
 
-    private static XYSeries pointSeries(List<SupportVector> vectors, byte y, String key) {
+    private static XYSeries pointSeries(List<FeatureVector> vectors, byte y, String key) {
         XYSeries series = new XYSeries(key);
-        for (SupportVector v : vectors) {
+        for (FeatureVector v : vectors) {
             if (v.y == y) {
                 series.add(v.x[0], v.x[1]);
             }

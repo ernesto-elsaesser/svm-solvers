@@ -47,7 +47,7 @@ public class ESZ {
 			int constrainedIndex = vectorCount - 1;
 			double sum = 0;
 			for (int i = 0; i < vectorCount; i++) {
-				SupportVector v = svm.vectors.get(i);
+				FeatureVector v = svm.vectors.get(i);
 				double newAlpha = 0;
 				if (i != constrainedIndex) {
 					newAlpha = generator.generate(i);
@@ -71,13 +71,13 @@ public class ESZ {
 				continue;
 			}
 			s1 += ai;
-			SupportVector vi = svm.vectors.get(i);
+			FeatureVector vi = svm.vectors.get(i);
 			for(int j = 0; j < vectorCount; j++) {
 				double aj = alphas[j];
 				if(aj < EPSILON) {
 					continue;
 				}
-				SupportVector vj = svm.vectors.get(j);
+				FeatureVector vj = svm.vectors.get(j);
 				s2 += (ai * aj * vi.sign() * vj.sign() * svm.kernelFunc(vi.x, vj.x));
 			}
 		}

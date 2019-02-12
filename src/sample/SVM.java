@@ -4,7 +4,7 @@ import java.util.List;
 
 public class SVM {
 
-    List<SupportVector> vectors;
+    List<FeatureVector> vectors;
     public boolean usePolyKernel;
     double b = 0;
     double epsilon = 0;
@@ -16,7 +16,7 @@ public class SVM {
     public double output(double[] x) {
         // $u = \sum_j \alpha_j y_j K(x_j, x) - b$
         double u = b;
-        for(SupportVector v : vectors) {
+        for(FeatureVector v : vectors) {
             if(v.alpha < epsilon)
                 continue; // ignore non-support vectors
             u += v.alpha * v.sign() * this.kernelFunc(v.x, x);

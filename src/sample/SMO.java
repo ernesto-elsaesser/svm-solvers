@@ -4,12 +4,12 @@ import java.util.*;
 
 class SMO {
 
-    private static final double EPSILON = 1e-3;
-    private static final double C = 10;
+    private static final double EPSILON = 1e-5;
+    private static final double C = 1;
 
     private static final Random random = new Random();
     private SVM svm;
-    private Map<SupportVector,Double> errorCache = new HashMap<>();
+    private Map<FeatureVector,Double> errorCache = new HashMap<>();
 
     public SMO(SVM svm) {
         svm.epsilon = EPSILON;
@@ -21,7 +21,7 @@ class SMO {
         boolean examineAll = true; // examine entire training set initially
         while(numChanged > 0 || examineAll) {
             numChanged = 0;
-            for(SupportVector v : svm.vectors)
+            for(FeatureVector v : svm.vectors)
                 if((examineAll || !v.bound) && examineExample(v))
                     numChanged++;
             if(examineAll)
@@ -34,7 +34,7 @@ class SMO {
         }
     }
 
-    private boolean examineExample(SupportVector v) {
+    private boolean examineExample(FeatureVector v) {
         if(satisfiesKKTConditions(v)) // not eligible for optimisation
             return false;
         // choose a vector with the second choice heuristic
@@ -44,30 +44,30 @@ class SMO {
         // so try all non-bound examples
         final int n = svm.vectors.size();
         final int pos = random.nextInt(n); // iterate from random position
-        for(SupportVector v1 : svm.vectors.subList(pos, n))
+        for(FeatureVector v1 : svm.vectors.subList(pos, n))
             if(!v1.bound && takeStep(v1, v))
                 return true;
-        for(SupportVector v1 : svm.vectors.subList(0, pos))
+        for(FeatureVector v1 : svm.vectors.subList(0, pos))
             if(!v1.bound && takeStep(v1, v))
                 return true;
         // positive progress was not made, so try entire training set
-        for(SupportVector v1 : svm.vectors.subList(pos, n))
+        for(FeatureVector v1 : svm.vectors.subList(pos, n))
             if(v1.bound && takeStep(v1, v))
                 return true;
-        for(SupportVector v1 : svm.vectors.subList(0, pos))
+        for(FeatureVector v1 : svm.vectors.subList(0, pos))
             if(v1.bound && takeStep(v1, v))
                 return true;
         // no adequate second example exists, so pick another first example
         return false;
     }
 
-    private double error(SupportVector v) {
+    private double error(FeatureVector v) {
         if(errorCache.containsKey(v))
             return errorCache.get(v);
         return svm.output(v.x) - v.y;
     }
 
-    private boolean satisfiesKKTConditions(SupportVector v) {
+    private boolean satisfiesKKTConditions(FeatureVector v) {
         final double r = error(v) * v.y; // (u-y)*y = y*u-1
         // (r >= 0 or alpha >= C) and (r <= 0 or alpha <= 0)
         return (this.geq(r, 0, EPSILON) ||
@@ -76,21 +76,21 @@ class SMO {
                         this.leq(v.alpha, 0, EPSILON));
     }
 
-    private SupportVector secondChoice(double error) {
-        Map.Entry<SupportVector,Double> best = null;
+    private FeatureVector secondChoice(double error) {
+        Map.Entry<FeatureVector,Double> best = null;
         if(error > 0) { // return vector with minimum error
-            for(Map.Entry<SupportVector,Double> entry : errorCache.entrySet())
+            for(Map.Entry<FeatureVector,Double> entry : errorCache.entrySet())
                 if(best == null || entry.getValue() < best.getValue())
                     best = entry;
         } else { // return vector with maximum error
-            for(Map.Entry<SupportVector,Double> entry : errorCache.entrySet())
+            for(Map.Entry<FeatureVector,Double> entry : errorCache.entrySet())
                 if(best == null || entry.getValue() > best.getValue())
                     best = entry;
         }
         return best.getKey();
     }
 
-    private boolean takeStep(SupportVector v1, SupportVector v2) {
+    private boolean takeStep(FeatureVector v1, FeatureVector v2) {
         if(v1.x == v2.x)
             // identical inputs cause objective function to become
             // semi-definite, so positive progress cannot be made
@@ -154,7 +154,7 @@ class SMO {
         svm.b += !v1.bound ? b1 : !v2.bound ? b2 : (b1+b2)/2;
 
         // update error cache
-        for(SupportVector v : svm.vectors) {
+        for(FeatureVector v : svm.vectors) {
             if(v.bound) continue; // bound examples are not cached
             if(v == v1 || v == v2) continue;
             final double k1 = svm.dotKernel(v1.x, v.x),
