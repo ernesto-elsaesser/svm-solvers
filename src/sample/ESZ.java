@@ -27,12 +27,10 @@ public class ESZ {
     }
     
     public void run() {
-		resultSet = new AlphaSet();
-		this.fillSet(resultSet, i -> Math.random());
+		resultSet = this.generateSet(i -> Math.random());
 
 		for(int s=0; s<ITERATIONS; s++) {
-			AlphaSet evolvedSet = new AlphaSet();
-			this.fillSet(evolvedSet, i -> this.offsetRandomly(i));
+			AlphaSet evolvedSet = this.generateSet(i -> this.offsetRandomly(resultSet.alphas[i]));
 			if(evolvedSet.score > resultSet.score)
 				resultSet = evolvedSet;
 		}
@@ -40,12 +38,13 @@ public class ESZ {
 		this.apply(resultSet);
     }
 
-	private void fillSet(AlphaSet set, AlphaGenerator generator) {
+	private AlphaSet generateSet(AlphaGenerator generator) {
 
-		set.alphas = new double[vectorCount];
+		double[] alphas = new double[vectorCount];
+
 		// try out alpha combinations until one is valid
 		while(true) {
-			int constrainedIndex = 0;
+			int constrainedIndex = vectorCount - 1;
 			double sum = 0;
 			for (int i = 0; i < vectorCount; i++) {
 				SupportVector v = svm.vectors.get(i);
@@ -54,10 +53,10 @@ public class ESZ {
 					newAlpha = generator.generate(i);
 					sum += newAlpha * v.sign();
 				}
-				set.alphas[i] = newAlpha;
+				alphas[i] = newAlpha;
 			}
-			set.alphas[constrainedIndex] = -sum * svm.vectors.get(constrainedIndex).sign();
-			if(set.alphas[constrainedIndex] > 0) {
+			alphas[constrainedIndex] = -sum * svm.vectors.get(constrainedIndex).sign();
+			if(alphas[constrainedIndex] > 0) {
 				break;
 			}
 		}
@@ -67,14 +66,14 @@ public class ESZ {
 		double s2 = 0;
 
 		for(int i = 0; i < vectorCount; i++) {
-			double ai = set.alphas[i];
+			double ai = alphas[i];
 			if(ai < EPSILON) {
 				continue;
 			}
 			s1 += ai;
 			SupportVector vi = svm.vectors.get(i);
 			for(int j = 0; j < vectorCount; j++) {
-				double aj = set.alphas[j];
+				double aj = alphas[j];
 				if(aj < EPSILON) {
 					continue;
 				}
@@ -83,13 +82,16 @@ public class ESZ {
 			}
 		}
 
+		AlphaSet set = new AlphaSet();
+		set.alphas = alphas;
 		set.score = s1 - (0.5 * s2);
+		return set;
 	}
 
-	private double offsetRandomly(int index) {
+	private double offsetRandomly(double alpha) {
 		double offset = Math.random() * DELTA;
 		if (Math.random()<0.5) offset *= -1;
-		double newAlpha = resultSet.alphas[index] - offset;
+		double newAlpha = alpha - offset;
 		if (newAlpha < EPSILON) {
 			return 0;
 		} else {
