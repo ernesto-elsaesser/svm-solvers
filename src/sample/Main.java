@@ -66,6 +66,7 @@ public class Main {
             ESZ esz = new ESZ(svm);
             esz.run();
         }
+        calculateB(svm);
 
         JFreeChart chart;
         Panel p = new Panel(new BorderLayout());
@@ -107,6 +108,26 @@ public class Main {
         if (testVectors != null) {
             classifyNewData(testVectors, svm);
         }
+    }
+
+    private static void calculateB(SVM svm) {
+        double sum = 0;
+        int effectiveCount = 0;
+        for (SupportVector i: svm.vectors) {
+            if (i.alpha < svm.epsilon) {
+                continue;
+            }
+            double subsum = 0;
+            for(SupportVector j: svm.vectors) {
+                if(j.alpha < svm.epsilon) {
+                    continue;
+                }
+                subsum += j.alpha * j.sign() * svm.kernelFunc(i.x, j.x);
+            }
+            sum += i.sign() - subsum;
+            effectiveCount++;
+        }
+        svm.b = sum / effectiveCount;
     }
 
     private static void classifyNewData(List<SupportVector> testing, SVM svm) {

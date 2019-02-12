@@ -100,29 +100,8 @@ public class ESZ {
 	}
 
 	private void apply(AlphaSet set) {
-		double sum = 0;
-		int effectiveCount = 0;
 		for (int i = 0; i < vectorCount; i++) {
-			double ai = set.alphas[i];
-			svm.vectors.get(i).alpha = ai;
-			if (ai < EPSILON) {
-				continue;
-			}
-
-			SupportVector vi = svm.vectors.get(i);
-			double subsum = 0;
-			for(int j = 0; j < vectorCount; j++) {
-				double aj = set.alphas[j];
-				if(aj < EPSILON) {
-					continue;
-				}
-				SupportVector vj = svm.vectors.get(j);
-				subsum += aj * vj.sign() * svm.kernelFunc(vi.x, vj.x);
-			}
-			sum += vi.sign() - subsum;
-
-			effectiveCount++;
+			svm.vectors.get(i).alpha = set.alphas[i];
 		}
-		svm.b = sum / effectiveCount;
 	}
 }

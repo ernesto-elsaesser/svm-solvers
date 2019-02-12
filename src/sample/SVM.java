@@ -6,8 +6,7 @@ public class SVM {
 
     List<SupportVector> vectors;
     public boolean usePolyKernel;
-    double b = 0; // treshold
-    double c = 1.0; // soft-margin parameter
+    double b = 0;
     double epsilon = 0;
 
     SVM(boolean usePolyKernel) {
@@ -18,7 +17,7 @@ public class SVM {
         // $u = \sum_j \alpha_j y_j K(x_j, x) - b$
         double u = b;
         for(SupportVector v : vectors) {
-            if(v.alpha <= epsilon)
+            if(v.alpha < epsilon)
                 continue; // ignore non-support vectors
             u += v.alpha * v.sign() * this.kernelFunc(v.x, x);
         }
