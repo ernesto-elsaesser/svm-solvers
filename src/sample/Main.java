@@ -1,8 +1,7 @@
 package sample;
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.event.*;
 import java.io.FileReader;
 import java.util.*;
 import java.util.List;
@@ -16,21 +15,21 @@ import org.jfree.chart.plot.*;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.xy.*;
 
-public class Main implements ActionListener {
+import sample.kernels.*;
+import sample.solvers.*;
 
-    private static int DATA_SET = 2;
-    private static boolean USE_SMO = true;
-    private static boolean USE_POLY_KERNEL = false;
+public class Main implements ActionListener {
 
     private JFrame frame;
     private JPanel configPanel;
     private JPanel mainPanel;
     private JComboBox dataSetSelector;
+    private JCheckBox kernelToggle;
 
-    private JCheckBox smoKernelToggle;
+    private SpinnerModel smoEpsilonModel;
     private JButton smoRunButton;
 
-    private JCheckBox eszKernelToggle;
+    private SpinnerModel eszEpsilonModel;
     private JButton eszRunButton;
 
     private String[] dataSets = {"trivial1","trivial2","separatable","circular","real1","real2"};
@@ -55,10 +54,14 @@ public class Main implements ActionListener {
         dataSetSelector = new JComboBox(dataSets);
         configPanel.add(dataSetSelector);
 
+        kernelToggle = new JCheckBox("Use polynomial kernel");
+        configPanel.add(kernelToggle);
+
         configPanel.add(this.algorithmHeader("SMO"));
 
-        smoKernelToggle = new JCheckBox("Use polynomial kernel");
-        configPanel.add(smoKernelToggle);
+        smoEpsilonModel = new SpinnerNumberModel(5, 1, 10, 1);
+        JSpinner smoEpsilonSpinner = new JSpinner(smoEpsilonModel);
+        configPanel.add(smoEpsilonSpinner);
 
         smoRunButton = new JButton("Run SMO");
         smoRunButton.addActionListener(this);
@@ -66,8 +69,9 @@ public class Main implements ActionListener {
 
         configPanel.add(this.algorithmHeader("Evolution"));
 
-        eszKernelToggle = new JCheckBox("Use polynomial kernel");
-        configPanel.add(eszKernelToggle);
+        eszEpsilonModel = new SpinnerNumberModel(5, 1, 10, 1);
+        JSpinner eszEpsilonSpinner = new JSpinner(eszEpsilonModel);
+        configPanel.add(eszEpsilonSpinner);
 
         eszRunButton = new JButton("Run ESZ");
         eszRunButton.addActionListener(this);
@@ -98,23 +102,29 @@ public class Main implements ActionListener {
         String dataSet = (String) dataSetSelector.getSelectedItem();
         List<FeatureVector> trainingVectors = parse(dataSet);
 
-        SVM svm;
-        if (e.getSource() == smoRunButton) {
-            boolean usePolyKernel = smoKernelToggle.isSelected();
-            svm = new SVM(usePolyKernel);
-            svm.vectors = trainingVectors;
-            SMO smo = new SMO(svm);
-            smo.train();
+        SVM svm = new SVM();
+        svm.vectors = trainingVectors;
+        if (kernelToggle.isSelected()) {
+            svm.kernel = new PolynomialKernel();
         } else {
-            boolean usePolyKernel = eszKernelToggle.isSelected();
-            svm = new SVM(usePolyKernel);
-            svm.vectors = trainingVectors;
-            ESZ esz = new ESZ(svm);
-            esz.run();
+            svm.kernel = new DotProductKernel();
         }
 
-        List<FeatureVector> supportVectors = findSupportVectors(svm);
-        svm.b = calculateB(supportVectors, svm);
+        SpinnerModel model;
+        Solver solver;
+
+        if (e.getSource() == smoRunButton) {
+            model = smoEpsilonModel;
+            solver = new SMO();
+        } else {
+            model = eszEpsilonModel;
+            solver = new ESZ();
+        }
+
+        int exp = (int) model.getValue();
+        svm.epsilon = 10 ^ (-exp);
+        solver.solve(svm);
+        svm.updateB();
 
         JFreeChart chart = createChart(trainingVectors, svm);
         ChartPanel chartPanel = new ChartPanel(chart);
@@ -122,41 +132,6 @@ public class Main implements ActionListener {
         mainPanel.removeAll();
         mainPanel.add(chartPanel);
         SwingUtilities.updateComponentTreeUI(frame);
-    }
-
-    private List<FeatureVector> findSupportVectors(SVM svm) {
-        List<FeatureVector> featureVectors = new ArrayList<>();
-        for (FeatureVector v: svm.vectors) {
-            if (v.alpha > svm.epsilon) {
-                featureVectors.add(v);
-            }
-        }
-        return featureVectors;
-    }
-
-    private double calculateB(List<FeatureVector> featureVectors, SVM svm) {
-        double bsum = 0;
-        for (FeatureVector i: featureVectors) {
-            double subsum = 0;
-            for(FeatureVector j: featureVectors) {
-                subsum += j.alpha * j.sign() * svm.kernelFunc(i.x, j.x);
-            }
-            bsum += i.sign() - subsum;
-        }
-        return bsum / featureVectors.size();
-    }
-
-    private double calculateBAlt(List<FeatureVector> featureVectors, SVM svm) {
-        double[] w = new double[2];
-        for (FeatureVector v : featureVectors) {
-            w[0] += v.alpha * v.sign() * v.x[0];
-            w[1] += v.alpha * v.sign() * v.x[1];
-        }
-        double bsum = 0;
-        for (FeatureVector v : featureVectors) {
-            bsum += v.sign() - svm.kernelFunc(v.x, w);
-        }
-        return bsum / featureVectors.size();
     }
 
     private List<FeatureVector> parse(String filename) {
@@ -268,16 +243,5 @@ public class Main implements ActionListener {
             }
         }
         return series;
-    }
-
-    private void classifyNewData(List<FeatureVector> testing, SVM svm) {
-        int rightClassification = 0;
-
-        for (FeatureVector testVector: testing) {
-            if (svm.output(testVector.x) <= 0 && ((int)testVector.y) == 0)
-                rightClassification++;
-        }
-
-        System.out.println("Zuverlässigkeit " + (((double)rightClassification / testing.size()) * 100) + "%");
     }
 }

@@ -3,13 +3,13 @@ package sample;
 public class FeatureVector {
 
     /** The input vector */
-    final double[] x;
+    public final double[] x;
     /** The target class: either +1 or -1 */
-    final byte y;
+    public final byte y;
     /** The Lagrange multiplier for this example */
-    double alpha;
+    public double alpha;
     /** Is the Lagrange multiplier bound? */
-    transient boolean bound = true;
+    public transient boolean bound = true;
 
     public FeatureVector(double x1, double x2, int y) {
         this(new double[] {x1, x2}, y, 0);
@@ -31,9 +31,5 @@ public class FeatureVector {
 
     public double sign() {
         return y == 0 ? -1.0 : 1.0;
-    }
-
-    public FeatureVector clone(double newAlpha) {
-        return new FeatureVector(x, y , newAlpha);
     }
 }

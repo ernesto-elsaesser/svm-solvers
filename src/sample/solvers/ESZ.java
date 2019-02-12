@@ -1,8 +1,10 @@
-package sample;
+package sample.solvers;
 
-public class ESZ {
+import sample.FeatureVector;
+import sample.SVM;
 
-	private static final double EPSILON = 1e-5; // 1e-7;
+public class ESZ implements Solver {
+
 	private static final int ITERATIONS = 10000000;
 	private static final double DELTA = 0.00001;
 
@@ -18,16 +20,10 @@ public class ESZ {
 
 	private SVM svm;
 	AlphaSet resultSet;
-	private int vectorCount;
-
-    public ESZ(SVM svm) {
-		svm.epsilon = EPSILON;
-        this.svm = svm;
-		this.vectorCount = svm.vectors.size();
-    }
     
-    public void run() {
-		resultSet = this.generateSet(i -> Math.random());
+    public void solve(SVM svm) {
+    	this.svm = svm;
+		this.resultSet = this.generateSet(i -> Math.random());
 
 		for(int s=0; s<ITERATIONS; s++) {
 			AlphaSet evolvedSet = this.generateSet(i -> this.offsetRandomly(resultSet.alphas[i]));
@@ -40,13 +36,14 @@ public class ESZ {
 
 	private AlphaSet generateSet(AlphaGenerator generator) {
 
-		double[] alphas = new double[vectorCount];
+    	int count = svm.vectors.size();
+		double[] alphas = new double[count];
 
 		// try out alpha combinations until one is valid
 		while(true) {
-			int constrainedIndex = vectorCount - 1;
+			int constrainedIndex = count - 1;
 			double sum = 0;
-			for (int i = 0; i < vectorCount; i++) {
+			for (int i = 0; i < count; i++) {
 				FeatureVector v = svm.vectors.get(i);
 				double newAlpha = 0;
 				if (i != constrainedIndex) {
@@ -65,20 +62,20 @@ public class ESZ {
 		double s1 = 0;
 		double s2 = 0;
 
-		for(int i = 0; i < vectorCount; i++) {
+		for(int i = 0; i < count; i++) {
 			double ai = alphas[i];
-			if(ai < EPSILON) {
+			if(ai < svm.epsilon) {
 				continue;
 			}
 			s1 += ai;
 			FeatureVector vi = svm.vectors.get(i);
-			for(int j = 0; j < vectorCount; j++) {
+			for(int j = 0; j < count; j++) {
 				double aj = alphas[j];
-				if(aj < EPSILON) {
+				if(aj < svm.epsilon) {
 					continue;
 				}
 				FeatureVector vj = svm.vectors.get(j);
-				s2 += (ai * aj * vi.sign() * vj.sign() * svm.kernelFunc(vi.x, vj.x));
+				s2 += (ai * aj * vi.sign() * vj.sign() * svm.kernel.apply(vi.x, vj.x));
 			}
 		}
 
@@ -92,7 +89,7 @@ public class ESZ {
 		double offset = Math.random() * DELTA;
 		if (Math.random()<0.5) offset *= -1;
 		double newAlpha = alpha - offset;
-		if (newAlpha < EPSILON) {
+		if (newAlpha < svm.epsilon) {
 			return 0;
 		} else {
 			return newAlpha;
@@ -100,7 +97,7 @@ public class ESZ {
 	}
 
 	private void apply(AlphaSet set) {
-		for (int i = 0; i < vectorCount; i++) {
+		for (int i = 0; i < svm.vectors.size(); i++) {
 			svm.vectors.get(i).alpha = set.alphas[i];
 		}
 	}
