@@ -5,6 +5,7 @@ import java.util.*;
 class SMO {
 
     private static final double EPSILON = 1e-3;
+    private static final double C = 10;
 
     private static final Random random = new Random();
     private SVM svm;
@@ -70,7 +71,7 @@ class SMO {
         final double r = error(v) * v.y; // (u-y)*y = y*u-1
         // (r >= 0 or alpha >= C) and (r <= 0 or alpha <= 0)
         return (this.geq(r, 0, EPSILON) ||
-                this.geq(v.alpha, svm.c, EPSILON)) &&
+                this.geq(v.alpha, C, EPSILON)) &&
                 (this.leq(r, 0, EPSILON) ||
                         this.leq(v.alpha, 0, EPSILON));
     }
@@ -103,11 +104,11 @@ class SMO {
         if(y1 != y2) {
             // equation (12.3)
             l = Math.max(0, alpha2 - alpha1);
-            h = Math.min(svm.c, svm.c + alpha2 - alpha1);
+            h = Math.min(C, C + alpha2 - alpha1);
         } else /* v1.y == v2.y */ {
             // equation (12.4)
-            l = Math.max(0, alpha2 + alpha1 - svm.c);
-            h = Math.min(svm.c, alpha2 + alpha1);
+            l = Math.max(0, alpha2 + alpha1 - C);
+            h = Math.min(C, alpha2 + alpha1);
         }
         if(l == h) // the alpha values are constrained to a single point
             return false;
@@ -140,9 +141,9 @@ class SMO {
 
         v1.alpha = alpha1 + s*(alpha2-v2.alpha); // equation (12.8)
         v1.bound = this.leq(v1.alpha, 0, EPSILON) ||
-                this.geq(v1.alpha, svm.c, EPSILON);
+                this.geq(v1.alpha, C, EPSILON);
         v2.bound = this.leq(v2.alpha, 0, EPSILON) ||
-                this.geq(v2.alpha, svm.c, EPSILON);
+                this.geq(v2.alpha, C, EPSILON);
 
         // update threshold
         final double b = svm.b;
