@@ -53,11 +53,11 @@ public class ESZ implements Solver { ;
 				double newAlpha = 0;
 				if (i != constrainedIndex) {
 					newAlpha = generator.generate(i);
-					sum += newAlpha * v.sign();
+					sum += newAlpha * v.y;
 				}
 				alphas[i] = newAlpha;
 			}
-			alphas[constrainedIndex] = -sum * svm.vectors.get(constrainedIndex).sign();
+			alphas[constrainedIndex] = -sum * svm.vectors.get(constrainedIndex).y;
 			if(alphas[constrainedIndex] > 0) {
 				break;
 			}
@@ -80,7 +80,7 @@ public class ESZ implements Solver { ;
 					continue;
 				}
 				FeatureVector vj = svm.vectors.get(j);
-				s2 += (ai * aj * vi.sign() * vj.sign() * svm.kernel.apply(vi.x, vj.x));
+				s2 += (ai * aj * vi.y * vj.y * svm.kernel.apply(vi.x, vj.x));
 			}
 		}
 

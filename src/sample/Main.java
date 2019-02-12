@@ -174,14 +174,13 @@ public class Main implements ActionListener {
     private JFreeChart createChart(List<FeatureVector> vectors, SVM svm) {
 
         XYSeries hyperplane   = areaSeries(svm, "Hyperplane");
-        XYSeries class1points = pointSeries(vectors, (byte)0, "Class1Points");
-        XYSeries class2points = pointSeries(vectors, (byte)1,"Class2Points");
+        XYSeries class1points = pointSeries(vectors, 1, "Class1Points");
+        XYSeries class2points = pointSeries(vectors, -1,"Class2Points");
 
 
         XYSeriesCollection dataset = new XYSeriesCollection();
 
         dataset.addSeries(class1points);
-
         dataset.addSeries(class2points);
         dataset.addSeries(hyperplane);
 
@@ -195,13 +194,13 @@ public class Main implements ActionListener {
         renderer.setSeriesShapesVisible(1, true);
         renderer.setSeriesPaint(1, Color.red);
 
-        renderer.setSeriesLinesVisible(2, false);
-        renderer.setSeriesShapesVisible(2, true);
-        renderer.setSeriesPaint(2, Color.yellow);
-
         renderer.setSeriesLinesVisible(0, false);
         renderer.setSeriesShapesVisible(0, true);
         renderer.setSeriesPaint(0, Color.blue);
+
+        renderer.setSeriesLinesVisible(2, false);
+        renderer.setSeriesShapesVisible(2, true);
+        renderer.setSeriesPaint(2, Color.yellow);
 
         plot.setRenderer(renderer);
 
@@ -246,7 +245,7 @@ public class Main implements ActionListener {
         return series;
     }
 
-    private XYSeries pointSeries(List<FeatureVector> vectors, byte y, String key) {
+    private XYSeries pointSeries(List<FeatureVector> vectors, int y, String key) {
         XYSeries series = new XYSeries(key);
         for (FeatureVector v : vectors) {
             if (v.y == y) {

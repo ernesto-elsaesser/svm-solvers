@@ -67,11 +67,11 @@ public class SMO implements Solver {
     private double error(FeatureVector v) {
         if(errorCache.containsKey(v))
             return errorCache.get(v);
-        return svm.output(v.x) - v.y;
+        return svm.output(v.x) - v.altY;
     }
 
     private boolean satisfiesKKTConditions(FeatureVector v) {
-        final double r = error(v) * v.y; // (u-y)*y = y*u-1
+        final double r = error(v) * v.altY; // (u-y)*y = y*u-1
         // (r >= 0 or alpha >= C) and (r <= 0 or alpha <= 0)
         return (this.geq(r, 0, svm.epsilon) ||
                 this.geq(v.alpha, c, svm.epsilon)) &&
@@ -99,7 +99,7 @@ public class SMO implements Solver {
             // semi-definite, so positive progress cannot be made
             return false;
         final double alpha1 = v1.alpha, alpha2 = v2.alpha;
-        final double y1 = v1.y, y2 = v2.y;
+        final double y1 = v1.altY, y2 = v2.altY;
 
         // endpoints (in terms of values of alpha2) of the diagonal line
         // segment representing the constraint between the two alpha values
@@ -108,7 +108,7 @@ public class SMO implements Solver {
             // equation (12.3)
             l = Math.max(0, alpha2 - alpha1);
             h = Math.min(c, c + alpha2 - alpha1);
-        } else /* v1.y == v2.y */ {
+        } else /* v1.altY == v2.altY */ {
             // equation (12.4)
             l = Math.max(0, alpha2 + alpha1 - c);
             h = Math.min(c, alpha2 + alpha1);

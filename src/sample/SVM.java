@@ -25,7 +25,7 @@ public class SVM {
         List<FeatureVector> supportVectors = this.getSupportVectors();
         double h = b;
         for(FeatureVector v : supportVectors) {
-            h += v.alpha * v.sign() * kernel.apply(v.x, x);
+            h += v.alpha * v.y * kernel.apply(v.x, x);
         }
         return h;
     }
@@ -36,9 +36,9 @@ public class SVM {
         for (FeatureVector i: supportVectors) {
             double subsum = 0;
             for(FeatureVector j: supportVectors) {
-                subsum += j.alpha * j.sign() * kernel.apply(i.x, j.x);
+                subsum += j.alpha * j.y * kernel.apply(i.x, j.x);
             }
-            bsum += i.sign() - subsum;
+            bsum += i.y - subsum;
         }
         b = bsum / supportVectors.size();
     }
@@ -47,12 +47,12 @@ public class SVM {
         List<FeatureVector> supportVectors = this.getSupportVectors();
         double[] w = new double[2];
         for (FeatureVector v : supportVectors) {
-            w[0] += v.alpha * v.sign() * v.x[0];
-            w[1] += v.alpha * v.sign() * v.x[1];
+            w[0] += v.alpha * v.y * v.x[0];
+            w[1] += v.alpha * v.y * v.x[1];
         }
         double bsum = 0;
         for (FeatureVector v : supportVectors) {
-            bsum += v.sign() - kernel.apply(v.x, w);
+            bsum += v.y - kernel.apply(v.x, w);
         }
         b = bsum / supportVectors.size();
     }
@@ -60,7 +60,7 @@ public class SVM {
     public double assessAccuracy(List<FeatureVector> testVectors) {
         int correctClassifications = 0;
         for (FeatureVector v: testVectors) {
-            if (Math.signum(this.output(v.x)) == v.sign())
+            if (Math.signum(this.output(v.x)) == v.y)
                 correctClassifications++;
         }
         return correctClassifications / testVectors.size();
