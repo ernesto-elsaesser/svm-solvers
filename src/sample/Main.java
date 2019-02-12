@@ -1,68 +1,114 @@
 package sample;
 
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.FileReader;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
 import javax.swing.*;
+import javax.swing.border.*;
+
 import com.opencsv.CSVReader;
 
-import layout.SpringUtilities;
 import org.jfree.chart.*;
 import org.jfree.chart.plot.*;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.xy.*;
 
-public class Main {
+public class Main implements ActionListener {
 
     private static int DATA_SET = 2;
-    private static boolean USE_SMO = false;
-    private static boolean USE_POLY_KERNEL = true;
+    private static boolean USE_SMO = true;
+    private static boolean USE_POLY_KERNEL = false;
+
+    private JFrame frame;
+    private JPanel configPanel;
+    private JPanel mainPanel;
+    private JComboBox dataSetSelector;
+
+    private JCheckBox smoKernelToggle;
+    private JButton smoRunButton;
+
+    private JCheckBox eszKernelToggle;
+    private JButton eszRunButton;
+
+    private String[] dataSets = {"trivial1","trivial2","separatable","circular","real1","real2"};
 
     public static void main(String[] args) {
+        Main instance = new Main();
+        instance.startUI();
+    }
 
-        JFrame f = new JFrame();
+    public void startUI() {
 
-        JLabel label = new JLabel("Loading ...");
-        label.setBounds(260,250, 80,40);
-        f.add(label);
+        frame = new JFrame();
+        frame.setSize(900,600);
+        frame.setLayout(null);
 
-        f.setSize(600,600);
-        f.setLayout(null);
-        f.setVisible(true);
+        JPanel splitPanel = new JPanel(new BorderLayout());
 
-        String trainingFile = "";
-        List<FeatureVector> testVectors = null;
-        switch (DATA_SET) {
-            case 0:
-                trainingFile = "fourclass";
-                testVectors = parse("fourclass-t");
-                break;
-            case 1:
-                trainingFile = "svmguide1";
-                testVectors = parse("svmguide1-t");
-                break;
-            case 2:
-                trainingFile = "separatable";
-                break;
-            case 3:
-                trainingFile = "circular";
-                break;
-            case 4:
-                trainingFile = "threepoint1";
-                break;
-            case 5:
-                trainingFile = "threepoint2";
-                break;
-        }
-        List<FeatureVector> trainingVectors = parse(trainingFile);
-        SVM svm = new SVM(USE_POLY_KERNEL);
-        svm.vectors = trainingVectors;
+        configPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        configPanel.setPreferredSize(new Dimension(200,600));
+        configPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        if (USE_SMO) {
+        dataSetSelector = new JComboBox(dataSets);
+        configPanel.add(dataSetSelector);
+
+        configPanel.add(this.algorithmHeader("SMO"));
+
+        smoKernelToggle = new JCheckBox("Use polynomial kernel");
+        configPanel.add(smoKernelToggle);
+
+        smoRunButton = new JButton("Run SMO");
+        smoRunButton.addActionListener(this);
+        configPanel.add(smoRunButton);
+
+        configPanel.add(this.algorithmHeader("Evolution"));
+
+        eszKernelToggle = new JCheckBox("Use polynomial kernel");
+        configPanel.add(eszKernelToggle);
+
+        eszRunButton = new JButton("Run ESZ");
+        eszRunButton.addActionListener(this);
+        configPanel.add(eszRunButton);
+
+        mainPanel = new JPanel();
+        mainPanel.setPreferredSize(new Dimension(700,600));
+
+        splitPanel.add(configPanel, BorderLayout.WEST);
+        splitPanel.add(mainPanel, BorderLayout.EAST);
+
+        frame.setContentPane(splitPanel);
+        frame.setVisible(true);
+    }
+
+    private JPanel algorithmHeader(String title) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setPreferredSize(new Dimension(180,40));
+        panel.setBorder(new EmptyBorder(10, 0, 10, 0));
+        panel.add(new JLabel(title), BorderLayout.NORTH);
+        panel.add(new JSeparator(SwingConstants.HORIZONTAL), BorderLayout.SOUTH);
+        return panel;
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+
+        String dataSet = (String) dataSetSelector.getSelectedItem();
+        List<FeatureVector> trainingVectors = parse(dataSet);
+
+        SVM svm;
+        if (e.getSource() == smoRunButton) {
+            boolean usePolyKernel = smoKernelToggle.isSelected();
+            svm = new SVM(usePolyKernel);
+            svm.vectors = trainingVectors;
             SMO smo = new SMO(svm);
             smo.train();
         } else {
+            boolean usePolyKernel = eszKernelToggle.isSelected();
+            svm = new SVM(usePolyKernel);
+            svm.vectors = trainingVectors;
             ESZ esz = new ESZ(svm);
             esz.run();
         }
@@ -70,49 +116,15 @@ public class Main {
         List<FeatureVector> supportVectors = findSupportVectors(svm);
         svm.b = calculateB(supportVectors, svm);
 
-        JFreeChart chart;
-        Panel p = new Panel(new BorderLayout());
-        chart = createChart(trainingVectors, svm);
-        ChartPanel panel = new ChartPanel(chart);
-        panel.setPreferredSize(f.getSize());
-        Panel settingsPanel = new Panel(new SpringLayout());
-
-        CheckboxGroup cbg = new CheckboxGroup();
-        Checkbox mbaBox = new Checkbox("MBA", cbg, true);
-        Checkbox btechBox = new Checkbox("B.Tech", cbg, false);
-        Checkbox archBox = new Checkbox("B.Arch", cbg, false);
-        Label lab = new Label("I Display Your Selection");
-
-        Panel cbp = new Panel();
-
-        settingsPanel.add(lab);
-        cbp.add(mbaBox);
-        cbp.add(btechBox);
-        cbp.add(archBox);
-        settingsPanel.add(cbp);
-
-        JLabel l = new JLabel("test", JLabel.TRAILING);
-        settingsPanel.add(l);
-        JTextField textField = new JTextField(10);
-        l.setLabelFor(textField);
-        settingsPanel.add(textField);
-
-        SpringUtilities.makeCompactGrid(settingsPanel,
-                1, 2, //rows, cols
-                6, 6,        //initX, initY
-                6, 6);       //xPad, yPad
-
-        p.add(panel, BorderLayout.CENTER);
-        p.add(settingsPanel, BorderLayout.LINE_END);
-        f.setContentPane(p);
-        SwingUtilities.updateComponentTreeUI(f);
-
-        if (testVectors != null) {
-            classifyNewData(testVectors, svm);
-        }
+        JFreeChart chart = createChart(trainingVectors, svm);
+        ChartPanel chartPanel = new ChartPanel(chart);
+        chartPanel.setPreferredSize(mainPanel.getSize());
+        mainPanel.removeAll();
+        mainPanel.add(chartPanel);
+        SwingUtilities.updateComponentTreeUI(frame);
     }
 
-    private static List<FeatureVector> findSupportVectors(SVM svm) {
+    private List<FeatureVector> findSupportVectors(SVM svm) {
         List<FeatureVector> featureVectors = new ArrayList<>();
         for (FeatureVector v: svm.vectors) {
             if (v.alpha > svm.epsilon) {
@@ -122,7 +134,7 @@ public class Main {
         return featureVectors;
     }
 
-    private static double calculateB(List<FeatureVector> featureVectors, SVM svm) {
+    private double calculateB(List<FeatureVector> featureVectors, SVM svm) {
         double bsum = 0;
         for (FeatureVector i: featureVectors) {
             double subsum = 0;
@@ -134,7 +146,7 @@ public class Main {
         return bsum / featureVectors.size();
     }
 
-    private static double calculateBAlt(List<FeatureVector> featureVectors, SVM svm) {
+    private double calculateBAlt(List<FeatureVector> featureVectors, SVM svm) {
         double[] w = new double[2];
         for (FeatureVector v : featureVectors) {
             w[0] += v.alpha * v.sign() * v.x[0];
@@ -147,18 +159,7 @@ public class Main {
         return bsum / featureVectors.size();
     }
 
-    private static void classifyNewData(List<FeatureVector> testing, SVM svm) {
-        int rightClassification = 0;
-
-        for (FeatureVector testVector: testing) {
-            if (svm.output(testVector.x) <= 0 && ((int)testVector.y) == 0)
-                rightClassification++;
-        }
-
-        System.out.println("Zuverlässigkeit " + (((double)rightClassification / testing.size()) * 100) + "%");
-    }
-
-    private static List<FeatureVector> parse(String filename) {
+    private List<FeatureVector> parse(String filename) {
         List<String[]> lines;
         try {
             CSVReader reader = new CSVReader(new FileReader("data/" + filename + ".csv"), ' ');
@@ -179,12 +180,12 @@ public class Main {
         return vectors;
     }
 
-    private static double parseValue(String s) {
+    private double parseValue(String s) {
         String[] parts = s.split(":");
         return Double.valueOf(parts[1]);
     }
 
-    private static JFreeChart createChart(List<FeatureVector> vectors, SVM svm) {
+    private JFreeChart createChart(List<FeatureVector> vectors, SVM svm) {
 
         XYSeries hyperplane   = areaSeries(svm, "Hyperplane");
         XYSeries class1points = pointSeries(vectors, (byte)0, "Class1Points");
@@ -221,7 +222,7 @@ public class Main {
         return chart;
     }
 
-    private static XYSeries areaSeries(SVM svm, String key) {
+    private XYSeries areaSeries(SVM svm, String key) {
         XYSeries series = new XYSeries(key);
 
         double xMin = 0.0;
@@ -259,7 +260,7 @@ public class Main {
         return series;
     }
 
-    private static XYSeries pointSeries(List<FeatureVector> vectors, byte y, String key) {
+    private XYSeries pointSeries(List<FeatureVector> vectors, byte y, String key) {
         XYSeries series = new XYSeries(key);
         for (FeatureVector v : vectors) {
             if (v.y == y) {
@@ -267,5 +268,16 @@ public class Main {
             }
         }
         return series;
+    }
+
+    private void classifyNewData(List<FeatureVector> testing, SVM svm) {
+        int rightClassification = 0;
+
+        for (FeatureVector testVector: testing) {
+            if (svm.output(testVector.x) <= 0 && ((int)testVector.y) == 0)
+                rightClassification++;
+        }
+
+        System.out.println("Zuverlässigkeit " + (((double)rightClassification / testing.size()) * 100) + "%");
     }
 }
