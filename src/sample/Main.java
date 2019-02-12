@@ -15,9 +15,8 @@ import org.jfree.data.xy.*;
 public class Main {
 
     private static int DATA_SET = 3;
-    private static boolean USE_CACHED_PLANE = false;
     private static boolean USE_SMO = false;
-    private static boolean USE_POLY_KERNEL = true;
+    private static boolean USE_POLY_KERNEL = false;
 
     static class Hyperplane {
         double b = 0, w0 = 0, w1 = 0;
@@ -63,21 +62,14 @@ public class Main {
         SVM svm = new SVM(USE_POLY_KERNEL);
         svm.vectors = trainingVectors;
 
-        Hyperplane h = new Hyperplane();
-        if (USE_CACHED_PLANE) {
-            h.b = -4.2;
-            h.w0 = 0.6;
-            h.w1 = 0.4;
+        if (USE_SMO) {
+            SMO smo = new SMO(svm);
+            smo.train();
         } else {
-            if (USE_SMO) {
-                SMO smo = new SMO(svm);
-                smo.train();
-            } else {
-                ESZ esz = new ESZ(svm);
-                esz.run();
-            }
-            h = deriveHyperplane(trainingVectors);
+            ESZ esz = new ESZ(svm);
+            esz.run();
         }
+        Hyperplane h = deriveHyperplane(trainingVectors);
 
         JFreeChart chart;
         if (!USE_POLY_KERNEL)
