@@ -2,7 +2,7 @@ package sample;
 
 public class ESZ {
 
-	private static final double EPSILON = 1e-7; // 1e-7;
+	private static final double EPSILON = 1e-5; // 1e-7;
 	private static final int ITERATIONS = 10000000;
 	private static final double DELTA = 0.00001;
 
