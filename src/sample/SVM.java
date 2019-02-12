@@ -30,7 +30,7 @@ public class SVM {
         return h;
     }
 
-    public double updateB() {
+    public void updateB() {
         List<FeatureVector> supportVectors = this.getSupportVectors();
         double bsum = 0;
         for (FeatureVector i: supportVectors) {
@@ -40,11 +40,10 @@ public class SVM {
             }
             bsum += i.sign() - subsum;
         }
-        return bsum / supportVectors.size();
+        b = bsum / supportVectors.size();
     }
 
-
-    public double updateBAlternative() {
+    public void updateBAlternative() {
         List<FeatureVector> supportVectors = this.getSupportVectors();
         double[] w = new double[2];
         for (FeatureVector v : supportVectors) {
@@ -55,7 +54,7 @@ public class SVM {
         for (FeatureVector v : supportVectors) {
             bsum += v.sign() - kernel.apply(v.x, w);
         }
-        return bsum / supportVectors.size();
+        b = bsum / supportVectors.size();
     }
 
     public double assessAccuracy(List<FeatureVector> testVectors) {

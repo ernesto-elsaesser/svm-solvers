@@ -57,9 +57,9 @@ public class Main implements ActionListener {
         kernelToggle = new JCheckBox("Use polynomial kernel");
         configPanel.add(kernelToggle);
 
-        configPanel.add(this.algorithmHeader("SMO"));
+        configPanel.add(this.solverHeader("SMO"));
 
-        smoEpsilonModel = new SpinnerNumberModel(5, 1, 10, 1);
+        smoEpsilonModel = new SpinnerNumberModel(-5, -10, -1, 1);
         JSpinner smoEpsilonSpinner = new JSpinner(smoEpsilonModel);
         configPanel.add(smoEpsilonSpinner);
 
@@ -67,9 +67,9 @@ public class Main implements ActionListener {
         smoRunButton.addActionListener(this);
         configPanel.add(smoRunButton);
 
-        configPanel.add(this.algorithmHeader("Evolution"));
+        configPanel.add(this.solverHeader("Evolution"));
 
-        eszEpsilonModel = new SpinnerNumberModel(5, 1, 10, 1);
+        eszEpsilonModel = new SpinnerNumberModel(-5, -10, -1, 1);
         JSpinner eszEpsilonSpinner = new JSpinner(eszEpsilonModel);
         configPanel.add(eszEpsilonSpinner);
 
@@ -87,7 +87,7 @@ public class Main implements ActionListener {
         frame.setVisible(true);
     }
 
-    private JPanel algorithmHeader(String title) {
+    private JPanel solverHeader(String title) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setPreferredSize(new Dimension(180,40));
         panel.setBorder(new EmptyBorder(10, 0, 10, 0));
@@ -121,8 +121,7 @@ public class Main implements ActionListener {
             solver = new ESZ();
         }
 
-        int exp = (int) model.getValue();
-        svm.epsilon = 10 ^ (-exp);
+        svm.epsilon = Math.pow(10, (int) model.getValue());
         solver.solve(svm);
         svm.updateB();
 
