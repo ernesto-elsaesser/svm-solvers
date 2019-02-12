@@ -7,6 +7,7 @@ import java.util.List;
 import javax.swing.*;
 import com.opencsv.CSVReader;
 
+import layout.SpringUtilities;
 import org.jfree.chart.*;
 import org.jfree.chart.plot.*;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
@@ -14,7 +15,7 @@ import org.jfree.data.xy.*;
 
 public class Main {
 
-    private static int DATA_SET = 2;
+    private static int DATA_SET = 0;
     private static boolean USE_SMO = false;
     private static boolean USE_POLY_KERNEL = true;
 
@@ -67,10 +68,40 @@ public class Main {
         }
 
         JFreeChart chart;
+        Panel p = new Panel(new BorderLayout());
         chart = createChart(trainingVectors, svm);
         ChartPanel panel = new ChartPanel(chart);
         panel.setPreferredSize(f.getSize());
-        f.setContentPane(panel);
+        Panel settingsPanel = new Panel(new SpringLayout());
+
+        CheckboxGroup cbg = new CheckboxGroup();
+        Checkbox mbaBox = new Checkbox("MBA", cbg, true);
+        Checkbox btechBox = new Checkbox("B.Tech", cbg, false);
+        Checkbox archBox = new Checkbox("B.Arch", cbg, false);
+        Label lab = new Label("I Display Your Selection");
+
+        Panel cbp = new Panel();
+
+        settingsPanel.add(lab);
+        cbp.add(mbaBox);
+        cbp.add(btechBox);
+        cbp.add(archBox);
+        settingsPanel.add(cbp);
+
+        JLabel l = new JLabel("test", JLabel.TRAILING);
+        settingsPanel.add(l);
+        JTextField textField = new JTextField(10);
+        l.setLabelFor(textField);
+        settingsPanel.add(textField);
+
+        SpringUtilities.makeCompactGrid(settingsPanel,
+                1, 2, //rows, cols
+                6, 6,        //initX, initY
+                6, 6);       //xPad, yPad
+
+        p.add(panel, BorderLayout.CENTER);
+        p.add(settingsPanel, BorderLayout.LINE_END);
+        f.setContentPane(p);
         SwingUtilities.updateComponentTreeUI(f);
 
         if (testVectors != null) {
