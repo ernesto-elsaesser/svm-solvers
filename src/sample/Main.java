@@ -30,7 +30,7 @@ public class Main implements ActionListener {
     private SpinnerModel eszDeltaModel;
     private JButton eszRunButton;
 
-    private String[] dataSets = {"trivial1","trivial2","separatable","circular","real1","real2"};
+    private String[] dataSets = {"trivial1","trivial2","separatable","circular","real1","real2","real3"};
     private JLabel reliabilityLabel;
     private JCheckBox reliabilityToggle;
 
