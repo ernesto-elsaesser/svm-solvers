@@ -10,8 +10,9 @@ public class SMO implements Solver {
     private static final Random random = new Random();
 
     private double c;
+    private double tolerance = 1e-3; // TODO: make configurable
     private SVM svm;
-    private Map<FeatureVector,Double> errorCache = new HashMap<>();
+    private Map<FeatureVector,Double> lastErrors = null;
 
     public SMO(double c) {
         this.c = c;
@@ -41,7 +42,7 @@ public class SMO implements Solver {
         if(satisfiesKKTConditions(v)) // not eligible for optimisation
             return false;
         // choose a vector with the second choice heuristic
-        if(!errorCache.isEmpty() && takeStep(secondChoice(error(v)), v))
+        if(!this.allErrors().isEmpty() && takeStep(secondChoice(error(v)), v))
             return true;
         // the heuristic did not make positive progress,
         // so try all non-bound examples
@@ -64,29 +65,48 @@ public class SMO implements Solver {
         return false;
     }
 
+    private Map<FeatureVector, Double> allErrors() {
+        if (lastErrors != null) {
+            return lastErrors;
+        }
+        Map<FeatureVector,Double> allErrors = new HashMap<>();
+        for (FeatureVector v: svm.vectors) {
+            if (v.bound) {
+                continue;
+            }
+            allErrors.put(v, this.error(v));
+        }
+        lastErrors = allErrors;
+        return allErrors;
+    }
+
     private double error(FeatureVector v) {
-        if(errorCache.containsKey(v))
-            return errorCache.get(v);
-        return svm.output(v.x) - v.altY;
+        if (lastErrors != null && lastErrors.containsKey(v)) {
+            return lastErrors.get(v);
+        }
+        return svm.output(v.x) - v.y;
     }
 
     private boolean satisfiesKKTConditions(FeatureVector v) {
-        final double r = error(v) * v.altY; // (u-y)*y = y*u-1
-        // (r >= 0 or alpha >= C) and (r <= 0 or alpha <= 0)
-        return (this.geq(r, 0, svm.epsilon) ||
-                this.geq(v.alpha, c, svm.epsilon)) &&
-                (this.leq(r, 0, svm.epsilon) ||
-                        this.leq(v.alpha, 0, svm.epsilon));
+        final double r = error(v) * v.y; // (u-y)*y = y*u-1
+        if (r < -tolerance && v.alpha < c) {
+            return false;
+        } else if (r > tolerance && v.alpha > 0) {
+            return false;
+        } else {
+            return true;
+        }
     }
 
     private FeatureVector secondChoice(double error) {
+        Map<FeatureVector,Double> allErrors = this.allErrors();
         Map.Entry<FeatureVector,Double> best = null;
         if(error > 0) { // return vector with minimum error
-            for(Map.Entry<FeatureVector,Double> entry : errorCache.entrySet())
+            for(Map.Entry<FeatureVector,Double> entry : allErrors.entrySet())
                 if(best == null || entry.getValue() < best.getValue())
                     best = entry;
         } else { // return vector with maximum error
-            for(Map.Entry<FeatureVector,Double> entry : errorCache.entrySet())
+            for(Map.Entry<FeatureVector,Double> entry : allErrors.entrySet())
                 if(best == null || entry.getValue() > best.getValue())
                     best = entry;
         }
@@ -99,7 +119,7 @@ public class SMO implements Solver {
             // semi-definite, so positive progress cannot be made
             return false;
         final double alpha1 = v1.alpha, alpha2 = v2.alpha;
-        final double y1 = v1.altY, y2 = v2.altY;
+        final double y1 = v1.y, y2 = v2.y;
 
         // endpoints (in terms of values of alpha2) of the diagonal line
         // segment representing the constraint between the two alpha values
@@ -108,7 +128,7 @@ public class SMO implements Solver {
             // equation (12.3)
             l = Math.max(0, alpha2 - alpha1);
             h = Math.min(c, c + alpha2 - alpha1);
-        } else /* v1.altY == v2.altY */ {
+        } else /* v1.y == v2.y */ {
             // equation (12.4)
             l = Math.max(0, alpha2 + alpha1 - c);
             h = Math.min(c, alpha2 + alpha1);
@@ -135,55 +155,28 @@ public class SMO implements Solver {
         v2.alpha = alpha2 + y2 * (e1-e2) / eta; // equation (12.6)
         v2.alpha = this.clamp(v2.alpha, l, h); // equation (12.7)
 
-        if(this.equals(v2.alpha, alpha2,
-                svm.epsilon*(v2.alpha+alpha2+svm.epsilon))) {
+        double diff = Math.abs(v2.alpha - alpha2);
+        if(diff < svm.epsilon*(v2.alpha + alpha2 + svm.epsilon)) {
             // change in alpha2 was too small
             v2.alpha = alpha2;
             return false;
         }
 
         v1.alpha = alpha1 + s*(alpha2-v2.alpha); // equation (12.8)
-        v1.bound = this.leq(v1.alpha, 0, svm.epsilon) ||
-                this.geq(v1.alpha, c, svm.epsilon);
-        v2.bound = this.leq(v2.alpha, 0, svm.epsilon) ||
-                this.geq(v2.alpha, c, svm.epsilon);
+        v1.bound = this.isBound(v1.alpha);
+        v2.bound = this.isBound(v2.alpha);
 
-        // update threshold
-        final double b = svm.b;
-        final double delta1 = y1 * (v1.alpha - alpha1),
-                delta2 = y2 * (v2.alpha - alpha2);
-        final double b1 = e1 + delta1*k11 + delta2*k12, // equation (12.9)
-                b2 = e2 + delta1*k12 + delta2*k22; // equation (12.10)
-        svm.b += !v1.bound ? b1 : !v2.bound ? b2 : (b1+b2)/2;
-
-        // update error cache
-        for(FeatureVector v : svm.vectors) {
-            if(v.bound) continue; // bound examples are not cached
-            if(v == v1 || v == v2) continue;
-            final double k1 = svm.kernel.apply(v1.x, v.x),
-                    k2 = svm.kernel.apply(v2.x, v.x);
-            double error = errorCache.get(v);
-            error += delta1*k1 + delta2*k2 + b - svm.b; // equation (12.11)
-            errorCache.put(v, error);
-        }
-        if(!v1.bound) errorCache.put(v1, 0.0);
-        else errorCache.remove(v1); // v1 is now bound - don't cache error
-        if(!v2.bound) errorCache.put(v2, 0.0);
-        else errorCache.remove(v2);
+        lastErrors = null; // invalidate cached errors
 
         return true;
     }
 
-    boolean equals(double x, double y, double epsilon) {
-        return Math.abs(x - y) < epsilon;
+    boolean isBound(double alpha) {
+        return this.equalDoubles(alpha,0) || this.equalDoubles(alpha,c);
     }
 
-    boolean leq(double x, double y, double epsilon) {
-        return x <= y + epsilon;
-    }
-
-    boolean geq(double x, double y, double epsilon) {
-        return x >= y - epsilon;
+    boolean equalDoubles(double a, double b) {
+        return Math.abs(a - b) <= 0.00001;
     }
 
     double clamp(double x, double low, double high) {

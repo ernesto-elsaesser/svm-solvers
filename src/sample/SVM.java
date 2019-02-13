@@ -23,11 +23,11 @@ public class SVM {
 
     public double output(double[] x) {
         List<FeatureVector> supportVectors = this.getSupportVectors();
-        double h = b;
+        double u = b;
         for(FeatureVector v : supportVectors) {
-            h += v.alpha * v.y * kernel.apply(v.x, x);
+            u += v.alpha * v.y * kernel.apply(v.x, x);
         }
-        return h;
+        return u;
     }
 
     public void updateB() {
