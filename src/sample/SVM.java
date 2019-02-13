@@ -63,6 +63,6 @@ public class SVM {
             if (Math.signum(this.output(v.x)) == v.y)
                 correctClassifications++;
         }
-        return correctClassifications / testVectors.size();
+        return correctClassifications * 1.0 / testVectors.size();
     }
 }

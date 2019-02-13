@@ -2,6 +2,7 @@ package sample;
 
 import com.opencsv.CSVReader;
 
+import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,8 +11,14 @@ public class CSVImporter {
 
     public static List<FeatureVector> read(String filename) {
         List<String[]> lines;
+
+        String filePath = "data/" + filename + ".csv";
+        File file = new File(filePath);
+        if (!file.exists())
+            return null;
+
         try {
-            CSVReader reader = new CSVReader(new FileReader("data/" + filename + ".csv"), ' ');
+            CSVReader reader = new CSVReader(new FileReader(filePath), ' ');
             lines = reader.readAll();
         } catch (Exception e) {
             lines = new ArrayList<>();
