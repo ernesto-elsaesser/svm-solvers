@@ -31,6 +31,8 @@ public class Main implements ActionListener {
     private JButton eszRunButton;
 
     private String[] dataSets = {"trivial1","trivial2","separatable","circular","real1","real2"};
+    private JLabel reliabilityLabel;
+    private JCheckBox reliabilityToggle;
 
     public static void main(String[] args) {
         Main instance = new Main();
@@ -58,6 +60,9 @@ public class Main implements ActionListener {
         kernelToggle = new JCheckBox("Use polynomial kernel");
         configPanel.add(kernelToggle);
 
+        reliabilityToggle = new JCheckBox("Calculate reliability");
+        configPanel.add(reliabilityToggle);
+
         epsilonModel = new SpinnerNumberModel(-5, -10, -1, 1);
         this.addSpinner("Epsilon Exp.", epsilonModel);
 
@@ -74,6 +79,10 @@ public class Main implements ActionListener {
         this.addSpinner("Delta Exp.", eszDeltaModel);
         eszRunButton = new JButton("Run ESZ");
         this.addSolverButton(eszRunButton);
+
+        this.addSolverHeader("Reliability");
+        reliabilityLabel = new JLabel("no testdata for this dataset");
+        configPanel.add(reliabilityLabel);
 
         mainPanel = new JPanel();
         mainPanel.setPreferredSize(new Dimension(700,600));
@@ -127,6 +136,19 @@ public class Main implements ActionListener {
         String dataSet = (String) dataSetSelector.getSelectedItem();
         List<FeatureVector> trainingVectors = CSVImporter.read(dataSet);
         SVM svm = this.calculateSVM(trainingVectors, solver);
+
+        List<FeatureVector> testVectors = CSVImporter.read(dataSet + "-t");
+        if (testVectors != null) {
+            reliabilityToggle.setEnabled(true);
+
+            if (solver == null || !reliabilityToggle.isSelected()) {
+                reliabilityLabel.setText("Check 'Calc reliability' and run");
+            } else
+                reliabilityLabel.setText((Math.round(svm.assessAccuracy(testVectors) * 10000.0) / 100.0) + " %");
+        } else {
+            reliabilityLabel.setText("No testdata for this dataset");
+            reliabilityToggle.setEnabled(false);
+        }
 
         JFreeChart chart = createChart(trainingVectors, svm);
         ChartPanel chartPanel = new ChartPanel(chart);
