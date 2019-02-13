@@ -13,11 +13,11 @@ public class SMO implements Solver {
     private static final Random random = new Random();
 
     private double c;
-    private double tolerance = 1e-4;
+    private double tolerance = 1e-3;
     private SVM svm;
 
-    private Map<FeatureVector,Double> errorCache = new HashMap<>();
     private Set<FeatureVector> unboundVectors = new HashSet<>();
+    private Map<FeatureVector,Double> errorCache = new HashMap<>();
 
     public SMO(double c) {
         this.c = c;
