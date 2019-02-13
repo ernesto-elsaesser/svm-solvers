@@ -10,9 +10,12 @@ public class SMO implements Solver {
     private static final Random random = new Random();
 
     private double c;
-    private double tolerance = 1e-3; // TODO: make configurable
+    private double tolerance = 1e-4; // TODO: make configurable
     private SVM svm;
-    private Map<FeatureVector,Double> lastErrors = null;
+
+    private final boolean USE_CACHE = false;
+    private Map<FeatureVector,Double> errorCache = new HashMap<>();
+    private Set<FeatureVector> unboundVectors = new HashSet<>();
 
     public SMO(double c) {
         this.c = c;
@@ -25,8 +28,9 @@ public class SMO implements Solver {
         boolean examineAll = true; // examine entire training set initially
         while(numChanged > 0 || examineAll) {
             numChanged = 0;
+            System.out.println("------------------------------------------------------");
             for(FeatureVector v : svm.vectors)
-                if((examineAll || !v.bound) && examineExample(v))
+                if((examineAll || isUnbound(v)) && examineExample(v))
                     numChanged++;
             if(examineAll)
                 // only examine non-bound examples in next pass
@@ -42,49 +46,42 @@ public class SMO implements Solver {
         if(satisfiesKKTConditions(v)) // not eligible for optimisation
             return false;
         // choose a vector with the second choice heuristic
-        if(!this.allErrors().isEmpty() && takeStep(secondChoice(error(v)), v))
+        FeatureVector chosenVector = secondChoice(error(v));
+        if(chosenVector != null && takeStep(chosenVector, v))
             return true;
         // the heuristic did not make positive progress,
         // so try all non-bound examples
         final int n = svm.vectors.size();
         final int pos = random.nextInt(n); // iterate from random position
         for(FeatureVector v1 : svm.vectors.subList(pos, n))
-            if(!v1.bound && takeStep(v1, v))
+            if(isUnbound(v) && takeStep(v1, v))
                 return true;
         for(FeatureVector v1 : svm.vectors.subList(0, pos))
-            if(!v1.bound && takeStep(v1, v))
+            if(isUnbound(v) && takeStep(v1, v))
                 return true;
         // positive progress was not made, so try entire training set
         for(FeatureVector v1 : svm.vectors.subList(pos, n))
-            if(v1.bound && takeStep(v1, v))
+            if(isBound(v) && takeStep(v1, v))
                 return true;
         for(FeatureVector v1 : svm.vectors.subList(0, pos))
-            if(v1.bound && takeStep(v1, v))
+            if(isBound(v) && takeStep(v1, v))
                 return true;
         // no adequate second example exists, so pick another first example
         return false;
     }
 
-    private Map<FeatureVector, Double> allErrors() {
-        if (lastErrors != null) {
-            return lastErrors;
-        }
-        Map<FeatureVector,Double> allErrors = new HashMap<>();
-        for (FeatureVector v: svm.vectors) {
-            if (v.bound) {
-                continue;
-            }
-            allErrors.put(v, this.error(v));
-        }
-        lastErrors = allErrors;
-        return allErrors;
+    private double error(FeatureVector v) {
+        if (USE_CACHE && errorCache.containsKey(v))
+            return errorCache.get(v);
+        return svm.output(v.x) - v.y;
     }
 
-    private double error(FeatureVector v) {
-        if (lastErrors != null && lastErrors.containsKey(v)) {
-            return lastErrors.get(v);
-        }
-        return svm.output(v.x) - v.y;
+    private boolean isBound(FeatureVector v) {
+        return unboundVectors.contains(v);
+    }
+
+    private boolean isUnbound(FeatureVector v) {
+        return !unboundVectors.contains(v);
     }
 
     private boolean satisfiesKKTConditions(FeatureVector v) {
@@ -99,18 +96,16 @@ public class SMO implements Solver {
     }
 
     private FeatureVector secondChoice(double error) {
-        Map<FeatureVector,Double> allErrors = this.allErrors();
-        Map.Entry<FeatureVector,Double> best = null;
-        if(error > 0) { // return vector with minimum error
-            for(Map.Entry<FeatureVector,Double> entry : allErrors.entrySet())
-                if(best == null || entry.getValue() < best.getValue())
-                    best = entry;
-        } else { // return vector with maximum error
-            for(Map.Entry<FeatureVector,Double> entry : allErrors.entrySet())
-                if(best == null || entry.getValue() > best.getValue())
-                    best = entry;
+        double bestError = error;
+        FeatureVector bestVector = null;
+        for (FeatureVector v: unboundVectors) {
+            double otherError = error(v);
+            if ( bestVector == null || (error > 0 && otherError < bestError) || (error < 0 && otherError > bestError)) {
+                bestVector = v;
+                bestError = otherError;
+            }
         }
-        return best.getKey();
+        return bestVector;
     }
 
     private boolean takeStep(FeatureVector v1, FeatureVector v2) {
@@ -155,28 +150,43 @@ public class SMO implements Solver {
         v2.alpha = alpha2 + y2 * (e1-e2) / eta; // equation (12.6)
         v2.alpha = this.clamp(v2.alpha, l, h); // equation (12.7)
 
-        double diff = Math.abs(v2.alpha - alpha2);
-        if(diff < svm.epsilon*(v2.alpha + alpha2 + svm.epsilon)) {
+        double delta = Math.abs(v2.alpha - alpha2);
+        if(delta < svm.epsilon*(v2.alpha+alpha2+svm.epsilon)) {
             // change in alpha2 was too small
             v2.alpha = alpha2;
             return false;
         }
 
         v1.alpha = alpha1 + s*(alpha2-v2.alpha); // equation (12.8)
-        v1.bound = this.isBound(v1.alpha);
-        v2.bound = this.isBound(v2.alpha);
 
-        lastErrors = null; // invalidate cached errors
+        int i1 = svm.vectors.indexOf(v1);
+        System.out.println("MOVE " + i1 + ": " + v1.alpha + " " + (v1.alpha - alpha1));
+        int i2 = svm.vectors.indexOf(v2);
+        System.out.println("MOVE " + i2 + ": " + v1.alpha + " " + (v2.alpha - alpha2));
+
+        if(withinBounds(v1.alpha))
+            unboundVectors.add(v1);
+        else
+            unboundVectors.remove(v1);
+
+        if(withinBounds(v2.alpha))
+            unboundVectors.add(v2);
+        else
+            unboundVectors.remove(v2);
+
+        // update error cache
+        if (USE_CACHE) {
+            for(FeatureVector v : svm.vectors) {
+                double error = svm.output(v.x) - v.y;
+                errorCache.put(v, error);
+            }
+        }
 
         return true;
     }
 
-    boolean isBound(double alpha) {
-        return this.equalDoubles(alpha,0) || this.equalDoubles(alpha,c);
-    }
-
-    boolean equalDoubles(double a, double b) {
-        return Math.abs(a - b) <= 0.00001;
+    boolean withinBounds(double alpha) {
+        return alpha > 0 + tolerance || alpha < c - tolerance;
     }
 
     double clamp(double x, double low, double high) {
