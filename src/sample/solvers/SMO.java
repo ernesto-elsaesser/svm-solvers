@@ -7,13 +7,15 @@ import java.util.*;
 
 public class SMO implements Solver {
 
+    private final boolean USE_CACHE = true;
+    private final boolean DEBUG_PRINT = true;
+
     private static final Random random = new Random();
 
     private double c;
-    private double tolerance = 1e-4; // TODO: make configurable
+    private double tolerance = 1e-4;
     private SVM svm;
 
-    private final boolean USE_CACHE = false;
     private Map<FeatureVector,Double> errorCache = new HashMap<>();
     private Set<FeatureVector> unboundVectors = new HashSet<>();
 
@@ -23,12 +25,12 @@ public class SMO implements Solver {
 
     public void solve(SVM svm) {
         this.svm = svm;
-
+        long start = (new Date()).getTime();
+        int rounds = 0;
         int numChanged = 0;
         boolean examineAll = true; // examine entire training set initially
         while(numChanged > 0 || examineAll) {
             numChanged = 0;
-            System.out.println("------------------------------------------------------");
             for(FeatureVector v : svm.vectors)
                 if((examineAll || isUnbound(v)) && examineExample(v))
                     numChanged++;
@@ -39,6 +41,12 @@ public class SMO implements Solver {
                 // all of the non-bound examples satisfy the KKT conditions,
                 // so examine the entire training set again
                 examineAll = true;
+            rounds++;
+            if (DEBUG_PRINT) {
+                long now = (new Date()).getTime();
+                long secondsPassed = (now-start)/1000;
+                System.out.println("SEC " + secondsPassed + " ROUND " + rounds + " - CHANGED " + numChanged);
+            }
         }
     }
 
@@ -158,11 +166,6 @@ public class SMO implements Solver {
         }
 
         v1.alpha = alpha1 + s*(alpha2-v2.alpha); // equation (12.8)
-
-        int i1 = svm.vectors.indexOf(v1);
-        System.out.println("MOVE " + i1 + ": " + v1.alpha + " " + (v1.alpha - alpha1));
-        int i2 = svm.vectors.indexOf(v2);
-        System.out.println("MOVE " + i2 + ": " + v1.alpha + " " + (v2.alpha - alpha2));
 
         if(withinBounds(v1.alpha))
             unboundVectors.add(v1);
