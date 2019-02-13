@@ -25,7 +25,7 @@ public class SMO implements Solver {
 
     public void solve(SVM svm) {
         this.svm = svm;
-        long start = (new Date()).getTime();
+        long start = System.currentTimeMillis();
         int rounds = 0;
         int numChanged = 0;
         boolean examineAll = true; // examine entire training set initially
@@ -43,9 +43,9 @@ public class SMO implements Solver {
                 examineAll = true;
             rounds++;
             if (DEBUG_PRINT) {
-                long now = (new Date()).getTime();
+                long now = System.currentTimeMillis();
                 long secondsPassed = (now-start)/1000;
-                System.out.println("SEC " + secondsPassed + " ROUND " + rounds + " - CHANGED " + numChanged);
+                System.out.println("SEC " + secondsPassed + " ROUND " + rounds + " - CHANGED " + numChanged + " UNBOUND " + unboundVectors.size());
             }
         }
     }
@@ -85,11 +85,11 @@ public class SMO implements Solver {
     }
 
     private boolean isBound(FeatureVector v) {
-        return unboundVectors.contains(v);
+        return !unboundVectors.contains(v);
     }
 
     private boolean isUnbound(FeatureVector v) {
-        return !unboundVectors.contains(v);
+        return unboundVectors.contains(v);
     }
 
     private boolean satisfiesKKTConditions(FeatureVector v) {
@@ -167,15 +167,17 @@ public class SMO implements Solver {
 
         v1.alpha = alpha1 + s*(alpha2-v2.alpha); // equation (12.8)
 
-        if(withinBounds(v1.alpha))
-            unboundVectors.add(v1);
-        else
+        if(alphaAtBound(v1.alpha))
             unboundVectors.remove(v1);
-
-        if(withinBounds(v2.alpha))
-            unboundVectors.add(v2);
         else
+            unboundVectors.add(v1);
+
+        if(alphaAtBound(v2.alpha))
             unboundVectors.remove(v2);
+        else
+            unboundVectors.add(v2);
+
+        // NOTE: no treshold update
 
         // update error cache
         if (USE_CACHE) {
@@ -188,8 +190,8 @@ public class SMO implements Solver {
         return true;
     }
 
-    boolean withinBounds(double alpha) {
-        return alpha > 0 + tolerance || alpha < c - tolerance;
+    boolean alphaAtBound(double alpha) {
+        return ( alpha < tolerance ) || ( alpha > c - tolerance );
     }
 
     double clamp(double x, double low, double high) {
